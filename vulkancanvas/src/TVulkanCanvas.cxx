@@ -21,12 +21,89 @@
 
 using namespace ROOT::Experimental;
 
+
+// Helper: VK check macro
+#define VK_CHECK(x) do { VkResult err = x; if (err) { std::cerr << "Vulkan error " << err << " at " << __LINE__ << std::endl; } } while(0)
+
+
+// ===================================================================
+// Translate VkDrawCommands (abstract) into real Vulkan draw calls
+// ===================================================================
+static void ProcessDrawCommands(VkContext *ctx, const VkDrawCommands &cmds, int canvasW, int canvasH) {
+   if (cmds.TotalVertices() == 0 && cmds.texts.empty()) return;
+
+   printf("ProcessDrawCommands %d %d\n", canvasW, canvasH);
+
+   std::vector<VkVertex> allVerts;
+   allVerts.reserve(cmds.TotalVertices());
+
+   for (auto &c : cmds.lines)
+      allVerts.insert(allVerts.end(), c.v, c.v + 2);
+   size_t lineVertOffset = 0;
+
+   for (auto &c : cmds.boxes)
+      allVerts.insert(allVerts.end(), c.v, c.v + 4);
+   size_t boxVertOffset = cmds.lines.size() * 2;
+
+   for (auto &cmd : cmds.polyLines)
+      allVerts.insert(allVerts.end(), cmd.verts.begin(), cmd.verts.end());
+   size_t polyLineVertOffset = boxVertOffset + cmds.boxes.size() * 4;
+
+   for (auto &cmd : cmds.polyMarkers)
+      allVerts.insert(allVerts.end(), cmd.verts.begin(), cmd.verts.end());
+   size_t markerVertOffset = polyLineVertOffset + cmds.polyLines.size() * 3;
+
+   // Upload vertices to staging buffer
+   if (!allVerts.empty()) {
+      VkDeviceSize bufferSize = allVerts.size() * sizeof(VkVertex);
+      if (ctx->vertexStagingMem) {
+         vkFreeMemory(ctx->device, ctx->vertexStagingMem, nullptr);
+         ctx->vertexStagingMem = VK_NULL_HANDLE;
+      }
+      if (ctx->vertexStaging) {
+         vkDestroyBuffer(ctx->device, ctx->vertexStaging, nullptr);
+         ctx->vertexStaging = VK_NULL_HANDLE;
+      }
+
+      VkBufferCreateInfo bufInfo = {};
+      bufInfo.sType            = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+      bufInfo.usage            = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                                 VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+      bufInfo.size             = bufferSize;
+      bufInfo.sharingMode      = VK_SHARING_MODE_EXCLUSIVE;
+      VK_CHECK(vkCreateBuffer(ctx->device, &bufInfo, nullptr, &ctx->vertexStaging));
+
+      VkMemoryRequirements req;
+      vkGetBufferMemoryRequirements(ctx->device, ctx->vertexStaging, &req);
+      VkMemoryAllocateInfo allocInfo = {};
+      allocInfo.sType               = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+      allocInfo.allocationSize     = req.size;
+      allocInfo.memoryTypeIndex    = 0; // TODO: pick suitable memory type
+      VK_CHECK(vkAllocateMemory(ctx->device, &allocInfo, nullptr, &ctx->vertexStagingMem));
+      VK_CHECK(vkBindBufferMemory(ctx->device, ctx->vertexStaging,
+                                  ctx->vertexStagingMem, 0));
+
+      void *pData;
+      VK_CHECK(vkMapMemory(ctx->device, ctx->vertexStagingMem, 0, bufferSize, 0, &pData));
+      memcpy(pData, allVerts.data(), bufferSize);
+      vkUnmapMemory(ctx->device, ctx->vertexStagingMem);
+   }
+
+   // Record draw calls - [REQUIRES] render pass + pipeline bound first:
+   //   vkCmdBeginRenderPass(...);
+   //   vkCmdBindPipeline(..., ctx->graphicsPipeline);
+   //   vkCmdBindVertexBuffers(cmdBuf, 0, 1, &ctx->vertexStaging, offsets);
+   //   if (cmds.lines.size())
+   //      vkCmdDraw(cmdBuf, cmds.lines.size()*2, 1, lineVertOffset, 0);
+   //   if (cmds.boxes.size())
+   //      vkCmdDraw(cmdBuf, cmds.boxes.size()*4, 1, boxVertOffset, 0);
+   //   vkCmdEndRenderPass(cmdBuf);
+}
+
 // --- Shader sources (spir-v embedded or loaded from file) ---
 // Vertex shader: pass-through with viewport transform
 // Fragment shader: output vertex color with alpha blend
 
-// Helper: VK check macro
-#define VK_CHECK(x) do { VkResult err = x; if (err) { std::cerr << "Vulkan error " << err << " at " << __LINE__ << std::endl; } } while(0)
 
 // ===================== VkContext ====================
 
@@ -301,6 +378,9 @@ void TVulkanCanvas::RunFrame() {
    VkContext *ctx = fVkCtx.get();
    TVulkanPadPainter::GetDrawCommands().Clear(); // reset from previous frame
 
+   // Actually trigger ROOT's paint loop (fills draw commands)
+   Canvas()->Paint();
+
    // Begin frame
    ctx->FrameBegin();
 
@@ -309,12 +389,8 @@ void TVulkanCanvas::RunFrame() {
    cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
    vkBeginCommandBuffer(ctx->commandBuffer, &cbbi);
 
-   // [TODO] Begin render pass, bind pipeline, draw collected commands
-   // For each line:    vkCmdDraw(2 vertices)
-   // For each box:     vkCmdDraw(4 vertices as triangle strip)
-   // For fill area:    triangulate + vkCmdDrawIndexed
-   // For text:         use text atlas / glyph cache with vkCmdDraw
-   // End render pass
+    // Translate queued commands into Vulkan draws + upload vertices
+   ProcessDrawCommands(ctx, TVulkanPadPainter::GetDrawCommands(), fWindowWidth, fWindowHeight);
 
    vkEndCommandBuffer(ctx->commandBuffer);
 

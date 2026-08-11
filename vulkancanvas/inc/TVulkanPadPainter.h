@@ -43,6 +43,10 @@ struct VkDrawCommands {
    std::vector<VkCmdText>     texts;
    void Clear() { lines.clear(); boxes.clear(); fillAreas.clear();
                   polyLines.clear(); polyMarkers.clear(); texts.clear(); }
+   size_t TotalVertices() const {
+      return lines.size()*2 + boxes.size()*4 +
+             fillAreas.size()*4 + polyLines.size()*2 + polyMarkers.size();
+   }
 };
 
 class TVulkanPadPainter : public TPadPainterBase {
