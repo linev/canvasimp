@@ -37,7 +37,7 @@ static bool sRaylibInitialized = false;
 RenderTexture2D persistentCanvas;
 Bool_t hasPersistentCanvas = false;
 
-const int menuBarHeight = 28;
+const int menuBarHeight = 32;
 const int statusBarHeight = 24;
 
 class TRaylibEventsTimer : public TTimer {
