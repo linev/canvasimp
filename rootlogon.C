@@ -1,4 +1,6 @@
 {
-   gPluginMgr->AddHandler("TGuiFactory", "raylib", "TRaylibGuiFactory",
-      "ROOTRaylibCanvas", "TRaylibGuiFactory()");
+   gPluginMgr->AddHandler("TGuiFactory", "raylib", "ROOT::Experimental::TRaylibGuiFactory",
+      "libROOTRaylibCanvas", "TRaylibGuiFactory()");
+
+   gSystem->AddDynamicPath(".");
 }

@@ -65,3 +65,17 @@ endif()
 # ROOT libraries are linked as PUBLIC so that any application linking against
 # your library will also inherit the necessary ROOT library mappings automatically.
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ROOT_LIBRARIES})
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    "${CMAKE_CURRENT_SOURCE_DIR}/rootlogon.C"
+    "${CMAKE_CURRENT_BINARY_DIR}/rootlogon.C"
+    COMMENT "Copying rootlogon.C to build directory..."
+)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    "${CMAKE_CURRENT_SOURCE_DIR}/.rootrc"
+    "${CMAKE_CURRENT_BINARY_DIR}/.rootrc"
+    COMMENT "Copying .rootrc to build directory..."
+)
