@@ -375,13 +375,58 @@ void TRaylibCanvas::RunRaylib()
       fFileMenuSelection = 0;
    }
 
-   // Secondary Menu Bar buttons can go here horizontally
-   if (GuiLabelButton((Rectangle){ 100, 4, 60, 24 }, "#11# Edit")) {
-      fStatusMessage = "Status: Edit Menu Activated";
+   if (GuiDropdownBox( (Rectangle){ 100, 4, 80, 24 }, "Edit;Clear pad;Clear canvas", &fEditMenuSelection, fEditDropdownOpen)) {
+      fEditDropdownOpen = !fEditDropdownOpen;
+      switch (fEditMenuSelection) {
+         case 0: break;
+         case 1:
+            gPad->Clear();
+            gPad->ModifiedUpdate();
+            break;
+         case 2:
+            Canvas()->Clear();
+            Canvas()->ModifiedUpdate();
+            break;
+      }
+      fEditMenuSelection = 0;
    }
-   if (GuiLabelButton((Rectangle){ 150, 4, 60, 24 }, "#195# Help")) {
-      fStatusMessage = "Status: Showing Help Manual";
+
+   if (GuiDropdownBox( (Rectangle){ 190, 4, 80, 24 }, "View;Editor;Toolbar;Statusbar;Tooltip", &fViewMenuSelection, fViewDropdownOpen)) {
+      fViewDropdownOpen = !fViewDropdownOpen;
+      switch (fViewMenuSelection) {
+         case 0:
+            break;
+         case 1:
+            break;
+         case 2:
+            break;
+         case 3:
+            ShowStatusBar(!fStatusBar);
+            break;
+         case 4:
+            break;
+      }
+      fViewMenuSelection = 0;
    }
+
+   if (GuiDropdownBox( (Rectangle){ fWindowWidth - 70, 4, 60, 24 }, "Help;Canvas;Menu;Editor", &fHelpMenuSelection, fHelpDropdownOpen)) {
+      fHelpDropdownOpen = !fHelpDropdownOpen;
+      switch (fHelpMenuSelection) {
+         case 0:
+            break;
+         case 1:
+            break;
+         case 2:
+            break;
+         case 3:
+            break;
+         case 4:
+            break;
+      }
+      fHelpMenuSelection = 0;
+   }
+
+
 
    ::EndDrawing();
 }

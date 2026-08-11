@@ -49,6 +49,12 @@ protected:
    TString fStatusMessage;
    int fFileMenuSelection = 0;
    bool fFileDropdownOpen = false;
+   int fEditMenuSelection = 0;
+   bool fEditDropdownOpen = false;
+   int fViewMenuSelection = 0;
+   bool fViewDropdownOpen = false;
+   int fHelpMenuSelection = 0;
+   bool fHelpDropdownOpen = false;
 
    static void EnsureRaylibInitialized(int width, int height);
 
