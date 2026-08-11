@@ -279,6 +279,9 @@ void TRaylibCanvas::RunRaylib()
    if (isInside && ((mousePos.y < 0) || (mousePos.y >= persistentCanvas.texture.height)))
       isInside = kFALSE;
 
+   if (!isInside)
+      SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+
    if (fCursowWasInside && !isInside)
       Canvas()->HandleInput(kMouseLeave, 0, 0);
    else if (!fCursowWasInside && isInside)
