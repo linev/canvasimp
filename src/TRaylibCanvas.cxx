@@ -272,6 +272,70 @@ void TRaylibCanvas::RunRaylib()
       fResized = kFALSE;
    }
 
+   Bool_t isInside = IsCursorOnScreen();
+   Vector2 mousePos = GetMousePosition();
+   if (fMenuBar)
+      mousePos.y -= menuBarHeight;
+   if (isInside && ((mousePos.y < 0) || (mousePos.y >= persistentCanvas.texture.height)))
+      isInside = kFALSE;
+
+   if (fCursowWasInside && !isInside)
+      Canvas()->HandleInput(kMouseLeave, 0, 0);
+   else if (!fCursowWasInside && isInside)
+      Canvas()->HandleInput(kMouseEnter, 0, 0);
+
+   fCursowWasInside = isInside;
+
+   if (isInside) {
+      if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+         Canvas()->HandleInput(kButton1Down, mousePos.x, mousePos.y);
+
+      if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+         Canvas()->HandleInput(kButton1Up, mousePos.x, mousePos.y);
+
+      if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE))
+         Canvas()->HandleInput(kButton2Down, mousePos.x, mousePos.y);
+
+      if (IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE))
+         Canvas()->HandleInput(kButton2Up, mousePos.x, mousePos.y);
+
+      if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
+         Canvas()->HandleInput(kButton3Down, mousePos.x, mousePos.y);
+
+      if (IsMouseButtonReleased(MOUSE_BUTTON_RIGHT))
+         Canvas()->HandleInput(kButton3Up, mousePos.x, mousePos.y);
+   }
+
+   float wheel = GetMouseWheelMove();
+   if ((wheel != 0) && isInside)
+      fCanvas->HandleInput(wheel > 0 ? kWheelUp : kWheelDown, mousePos.x, mousePos.y);
+
+   Vector2 delta  = GetMouseDelta();
+
+   if (isInside && (delta.x != 0.0f || delta.y != 0.0f)) {
+      if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+         Canvas()->HandleInput(kButton1Motion, mousePos.x, mousePos.y);
+      else
+         Canvas()->HandleInput(kMouseMotion, mousePos.x, mousePos.y);
+
+      TObject *selected = fCanvas->GetSelected();
+      Int_t px = fCanvas->GetEventX();
+      Int_t py = fCanvas->GetEventY();
+      fStatusMessage = "";
+      if (selected) {
+         fStatusMessage = selected->GetName();
+         fStatusMessage += "  ";
+         fStatusMessage += selected->GetObjectInfo(px, py);
+      } else {
+         fStatusMessage = "No selected object x = ";
+         fStatusMessage += px;
+         fStatusMessage += "  y = ";
+         fStatusMessage += py;
+      }
+   }
+
+
+
    ::BeginDrawing();
    ::ClearBackground(RAYWHITE);
 

@@ -42,6 +42,7 @@ protected:
    Bool_t fResized = kTRUE;     ///<! if window was resized
    Bool_t fMenuBar = kTRUE;     ///<! use of menu bar
    Bool_t fStatusBar = kTRUE;   ///<! use of status bar
+   Bool_t fCursowWasInside = kFALSE; ///<! when mouse cursor was on screen or not
 
    std::string fWindowTitle;    ///<! current window title
 
