@@ -72,10 +72,3 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     "${CMAKE_CURRENT_BINARY_DIR}/rootlogon.C"
     COMMENT "Copying rootlogon.C to build directory..."
 )
-
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-    "${CMAKE_CURRENT_SOURCE_DIR}/.rootrc"
-    "${CMAKE_CURRENT_BINARY_DIR}/.rootrc"
-    COMMENT "Copying .rootrc to build directory..."
-)
