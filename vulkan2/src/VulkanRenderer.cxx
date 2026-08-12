@@ -407,6 +407,7 @@ void VulkanRenderer::AddLine(float x1, float y1, float x2, float y2,
 void VulkanRenderer::AddFilledTriangle(float x1, float y1, float x2, float y2, float x3, float y3,
                                         float r, float g, float b, float a)
 {
+   // printf("draw triangle rgba %4.3f %4.3f %4.3f %4.3f    edges 1: %5.2f %5.2f    2: %5.2f %5.2f    3: %5.2f %5.2f \n", r, g, b, a, x1, y1, x2, y2, x3, y3);
    fFrameVertices.push_back({ x1, y1, r, g, b, a });
    fFrameVertices.push_back({ x2, y2, r, g, b, a });
    fFrameVertices.push_back({ x3, y3, r, g, b, a });
@@ -440,6 +441,8 @@ void VulkanRenderer::EndFrame()
    vkAcquireNextImageKHR(fDevice, fSwapchain, UINT64_MAX, fImageAvailable, VK_NULL_HANDLE, &fCurrentImageIndex);
 
    size_t bytes = fFrameVertices.size() * sizeof(Vertex2D);
+
+   printf("EndFrame - copy bytes %d\n", (int) bytes);
    if (bytes > 0) memcpy(fVertexBufferMapped, fFrameVertices.data(), bytes);
 
    VkCommandBuffer cmd = fCommandBuffers[0];

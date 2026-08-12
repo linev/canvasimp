@@ -97,6 +97,15 @@ void TVulkanPadPainter::DrawFillArea(Int_t n, const Float_t *x, const Float_t *y
    fRenderer->AddFilledPolygon(xs, ys, r, g, b, a);
 }
 
+void TVulkanPadPainter::DrawPolyLine(Int_t n, const Float_t *x, const Float_t *y)
+{
+   float r, g, b, a;
+   auto &att = GetAttLine();
+   GetColorRGBA(att.GetLineColor(), r, g, b, a);
+   for (Int_t i = 0; i + 1 < n; ++i)
+      fRenderer->AddLine((float)x[i], (float)y[i], (float)x[i + 1], (float)y[i + 1], r, g, b, a, (float)att.GetLineWidth());
+}
+
 void TVulkanPadPainter::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
 {
    float r, g, b, a;

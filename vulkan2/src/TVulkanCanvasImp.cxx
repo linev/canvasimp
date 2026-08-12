@@ -14,6 +14,8 @@
 TVulkanCanvasImp::TVulkanCanvasImp(TCanvas *canvas, const char *title, UInt_t width, UInt_t height)
    : TCanvasImp(canvas, title, width, height)
 {
+   fWinWidth = width;
+   fWinHeight = height;
    glfwInit();
    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Vulkan, not GL - GLFW just gives us the surface
 
@@ -36,6 +38,23 @@ TVulkanCanvasImp::~TVulkanCanvasImp()
    if (fWindow) glfwDestroyWindow(fWindow);
    glfwTerminate();
 }
+
+UInt_t TVulkanCanvasImp::GetWindowGeometry(Int_t &x, Int_t &y, UInt_t &w, UInt_t &h)
+{
+   x = y = 0;
+   w = fWinWidth;
+   h = fWinHeight;
+   return 0;
+
+}
+
+void TVulkanCanvasImp::GetCanvasGeometry([[maybe_unused]] Int_t wid, UInt_t &w, UInt_t &h)
+{
+   w = fWinWidth;
+   h = fWinHeight;
+}
+
+
 
 Int_t TVulkanCanvasImp::InitWindow()
 {
@@ -97,11 +116,30 @@ void TVulkanCanvasImp::SetStatusText(const char *text, Int_t /*partIdx*/)
 
 void TVulkanCanvasImp::ForceUpdate()
 {
-   RunOnce();
+   if (Canvas())
+      Canvas()->Modified();
 }
+
+Bool_t TVulkanCanvasImp::PerformUpdate(Bool_t)
+{
+   if (!Canvas() || !Canvas()->IsModified())
+      return kFALSE;
+
+   RunOnce();
+   return kTRUE;
+}
+
+TVirtualPadPainter *TVulkanCanvasImp::CreatePadPainter()
+{
+   return new TVulkanPadPainter(fRenderer);
+}
+
+
 
 void TVulkanCanvasImp::RunOnce()
 {
+   printf("Calling RunOnce\n");
+
    if (!fWindow || glfwWindowShouldClose(fWindow)) return;
 
    glfwPollEvents();
@@ -111,8 +149,10 @@ void TVulkanCanvasImp::RunOnce()
    // TVirtualPadPainter (fPainter) while walking the pad's primitive list,
    // typically via TCanvas::Paint() / TPad::PaintModified() invoked from
    // wherever this RunOnce() is pumped from.
-   if (Canvas()) Canvas()->Paint();
+   if (Canvas())
+      Canvas()->Paint();
    fRenderer->EndFrame();
+   printf("Calling RunOnce done\n");
 }
 
 // --- Input callbacks -------------------------------------------------------

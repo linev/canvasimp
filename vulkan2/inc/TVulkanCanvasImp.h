@@ -22,9 +22,22 @@ class VulkanRenderer;
 class TVulkanPadPainter;
 
 class TVulkanCanvasImp : public TCanvasImp {
+protected:
+
+   Bool_t PerformUpdate(Bool_t async) override;
+   TVirtualPadPainter *CreatePadPainter() override;
+
+   UInt_t fWinWidth = 0;
+   UInt_t fWinHeight = 0;
+
 public:
    TVulkanCanvasImp(TCanvas *canvas, const char *title, UInt_t width, UInt_t height);
    ~TVulkanCanvasImp() override;
+
+   // Geometry
+   UInt_t GetWindowGeometry(Int_t &x, Int_t &y, UInt_t &w, UInt_t &h) override;
+   void GetCanvasGeometry(Int_t wid, UInt_t &w, UInt_t &h) override;
+
 
    // --- TCanvasImp interface ---------------------------------------------
    void   Close() override;
