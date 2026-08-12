@@ -1,3 +1,13 @@
+// Author: Sergey Linev, GSI   12/08/2026
+
+/*************************************************************************
+ * Copyright (C) 1995-2026, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 /* gtkmm example Copyright (C) 2002 gtkmm development team
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,16 +24,20 @@
  * with this program; if not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef GTKMM_EXAMPLEWINDOW_H
-#define GTKMM_EXAMPLEWINDOW_H
+#ifndef ROOT_Gtk4CanvasWindow_H
+#define ROOT_Gtk4CanvasWindow_H
 
 #include <gtkmm.h>
 
-class ExampleWindow : public Gtk::Window
+#include "Gtk4DrawArea.h"
+
+class Gtk4CanvasWindow : public Gtk::Window
 {
 public:
-  ExampleWindow(const Glib::RefPtr<Gtk::Application>& app);
-  virtual ~ExampleWindow();
+  Gtk4CanvasWindow(unsigned width = 400, unsigned height = 200);
+  virtual ~Gtk4CanvasWindow();
+
+  Gtk4DrawArea *GetDrawArea() const { return fDrawArea; }
 
 private:
   //Signal handlers:
@@ -35,9 +49,12 @@ private:
   //Child widgets:
   Gtk::Box m_Box;
 
+
+  Gtk4DrawArea *fDrawArea;
+
   Glib::RefPtr<Gtk::Builder> m_refBuilder;
   Glib::RefPtr<Gio::SimpleActionGroup> m_refActionGroup;
   Glib::RefPtr<Gio::SimpleAction> m_refActionRain;
 };
 
-#endif //GTKMM_EXAMPLEWINDOW_H
+#endif //GTKMM_Gtk4CanvasWindow_H

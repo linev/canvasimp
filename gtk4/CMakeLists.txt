@@ -1,27 +1,47 @@
-cmake_minimum_required(VERSION 3.15)
-project(GtkmmMainMenuExample LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.16)
+project(ROOTGtk4Canvas CXX)
 
-# gtkmm-4.0 requires at least C++17
-set(CMAKE_CXX_STANDARD 17)
+find_package(ROOT REQUIRED COMPONENTS Core Gpad)
+include(${ROOT_USE_FILE})
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find PkgConfig utility
+
 find_package(PkgConfig REQUIRED)
 
-# Detect and configure gtkmm 4.0 package using modern IMPORTED targets
 pkg_check_modules(GTKMM REQUIRED IMPORTED_TARGET gtkmm-4.0)
 
-# Declare all the source files belonging to the main_menu example
-set(SOURCE_FILES
-    main.cc
-    exampledrawarea.h
-    exampledrawarea.cc
-    examplewindow.h
-    examplewindow.cc
+# 4. Declare your library source files
+set(SOURCES
+    src/Gtk4DrawArea.cxx
+    src/Gtk4CanvasWindow.cxx
+    src/TGtk4Canvas.cxx
+    src/TGtk4GuiFactory.cxx
+    src/TGtk4PadPainter.cxx
 )
 
-# Define our executable
-add_executable(gtkmm_menu_demo ${SOURCE_FILES})
+set(HEADERS
+    inc/TGtk4Canvas.h
+    inc/TGtk4GuiFactory.h
+    inc/TGtk4PadPainter.h
+)
 
-# Link to the imported target (this handles compile flags, includes, and libs cleanly)
-target_link_libraries(gtkmm_menu_demo PRIVATE PkgConfig::GTKMM)
+# 5. Generate ROOT Dictionary
+# This will output 'G__MyDict.cxx' which must be compiled into the library.
+ROOT_GENERATE_DICTIONARY(G__MyDict ${HEADERS}
+                         LINKDEF inc/LinkDef.h
+                         MODULE ${PROJECT_NAME}
+                         NOINSTALL)
+
+# 6. Define the Library Build Target
+# Options: STATIC (creates .a file) or SHARED (creates .so file on Linux)
+add_library(${PROJECT_NAME} SHARED ${SOURCES} G__MyDict.cxx)
+
+# 7. Configure Include Directories Interface
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    ${ROOT_INCLUDE_DIRS}
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::GTKMM)

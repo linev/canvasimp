@@ -1,3 +1,13 @@
+// Author: Sergey Linev, GSI   12/08/2026
+
+/*************************************************************************
+ * Copyright (C) 1995-2026, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 /* gtkmm example Copyright (C) 2002 gtkmm development team
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,17 +24,17 @@
  * with this program; if not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "examplewindow.h"
-#include "exampledrawarea.h"
+#include "Gtk4CanvasWindow.h"
+
 #include <gtkmm.h>
 #include <gtkmm/statusbar.h>
 #include <iostream>
 
-ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
+Gtk4CanvasWindow::Gtk4CanvasWindow(unsigned width, unsigned height)
 : m_Box(Gtk::Orientation::VERTICAL)
 {
-  set_title("main_menu example");
-  set_default_size(200, 200);
+  set_title("canvas widget");
+  set_default_size(width, height);
 
   set_child(m_Box); //We can put a MenuBar at the top of the box and other stuff below it.
 
@@ -39,15 +49,15 @@ ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
   // With sigc::mem_fun() or (for non-member functions and static member functions)
   // sigc::ptr_fun(). The only way before C++11 introduced lambda expressions.
   m_refActionGroup->add_action("open",
-    sigc::mem_fun(*this, &ExampleWindow::on_action_others) );
+    sigc::mem_fun(*this, &Gtk4CanvasWindow::on_action_others) );
 
-  // With a lambda expression. Does not disconnect automatically when ExampleWindow
+  // With a lambda expression. Does not disconnect automatically when Gtk4CanvasWindow
   // is deleted, like sigc::mem_fun() does.
   m_refActionRain = m_refActionGroup->add_action_bool("rain",
     [this] { on_action_toggle(); }, false);
 
   m_refActionGroup->add_action("quit",
-    sigc::mem_fun(*this, &ExampleWindow::on_action_file_quit) );
+    sigc::mem_fun(*this, &Gtk4CanvasWindow::on_action_file_quit) );
 
   // With a lambda expression and sigc::track_obj() or sigc::track_object().
   // Disconnects automatically like sigc::mem_fun().
@@ -59,9 +69,9 @@ ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
     sigc::track_obj([this] { on_action_others(); }, *this));
 #endif
   m_refActionGroup->add_action("copy",
-    sigc::mem_fun(*this, &ExampleWindow::on_action_others) );
+    sigc::mem_fun(*this, &Gtk4CanvasWindow::on_action_others) );
   m_refActionGroup->add_action("paste",
-    sigc::mem_fun(*this, &ExampleWindow::on_action_others) );
+    sigc::mem_fun(*this, &Gtk4CanvasWindow::on_action_others) );
 
   insert_action_group("example", m_refActionGroup);
 
@@ -115,14 +125,6 @@ ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
     "  </menu>"
     "</interface>";
 
-  // Set accelerator keys:
-  app->set_accel_for_action("example.new", "<Primary>n");
-  app->set_accel_for_action("example.open", "<Primary>o");
-  app->set_accel_for_action("example.quit", "<Primary>q");
-  app->set_accel_for_action("example.cut", "<Primary>x");
-  app->set_accel_for_action("example.copy", "<Primary>c");
-  app->set_accel_for_action("example.paste", "<Primary>v");
-
   try
   {
     m_refBuilder->add_from_string(ui_info);
@@ -146,10 +148,10 @@ ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
   }
 
 
-  auto p_drawing_area = Gtk::make_managed<MyDrawingArea>();
-  p_drawing_area->set_hexpand(true);
-  p_drawing_area->set_vexpand(true);
-  m_Box.append(*p_drawing_area);
+  fDrawArea = Gtk::make_managed<Gtk4DrawArea>();
+  fDrawArea->set_hexpand(true);
+  fDrawArea->set_vexpand(true);
+  m_Box.append(*fDrawArea);
 
 
 
@@ -159,26 +161,26 @@ ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
   m_Box.append(*p_statusbar);
 }
 
-ExampleWindow::~ExampleWindow()
+Gtk4CanvasWindow::~Gtk4CanvasWindow()
 {
 }
 
-void ExampleWindow::on_action_file_quit()
+void Gtk4CanvasWindow::on_action_file_quit()
 {
   close();
 }
 
-//void ExampleWindow::on_action_file_new()
+//void Gtk4CanvasWindow::on_action_file_new()
 //{
 //   std::cout << "A File|New menu item was selected." << std::endl;
 //}
 
-void ExampleWindow::on_action_others()
+void Gtk4CanvasWindow::on_action_others()
 {
   std::cout << "A menu item was selected." << std::endl;
 }
 
-void ExampleWindow::on_action_toggle()
+void Gtk4CanvasWindow::on_action_toggle()
 {
   std::cout << "The toggle menu item was selected." << std::endl;
 
