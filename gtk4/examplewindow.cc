@@ -15,7 +15,9 @@
  */
 
 #include "examplewindow.h"
+#include "exampledrawarea.h"
 #include <gtkmm.h>
+#include <gtkmm/statusbar.h>
 #include <iostream>
 
 ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
@@ -124,12 +126,12 @@ ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
   try
   {
     m_refBuilder->add_from_string(ui_info);
-    m_refBuilder->add_from_resource("/toolbar/toolbar.ui");
   }
   catch(const Glib::Error& ex)
   {
     std::cerr << "Building menus and toolbar failed: " <<  ex.what();
   }
+
 
   //Get the menubar:
   auto gmenu = m_refBuilder->get_object<Gio::Menu>("menubar");
@@ -143,12 +145,18 @@ ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
     m_Box.append(*pMenuBar);
   }
 
-  //Get the toolbar and add it to a container widget:
-  auto toolbar = m_refBuilder->get_widget<Gtk::Box>("toolbar");
-  if (!toolbar)
-    g_warning("toolbar not found");
-  else
-    m_Box.append(*toolbar);
+
+  auto p_drawing_area = Gtk::make_managed<MyDrawingArea>();
+  p_drawing_area->set_hexpand(true);
+  p_drawing_area->set_vexpand(true);
+  m_Box.append(*p_drawing_area);
+
+
+
+  auto p_statusbar = Gtk::make_managed<Gtk::Statusbar>();
+  unsigned int context_id = p_statusbar->get_context_id("main_status");
+  p_statusbar->push("Ready to draw", context_id);
+  m_Box.append(*p_statusbar);
 }
 
 ExampleWindow::~ExampleWindow()
