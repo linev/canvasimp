@@ -14,16 +14,13 @@
  * with this program; if not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "exampleapplication.h"
+#include <gtkmm.h>
+#include "examplewindow.h"
 
 int main(int argc, char* argv[])
 {
-  auto application = ExampleApplication::create();
+  auto app = Gtk::Application::create("org.gtkmm.example");
 
-  // Start the application, showing the initial window,
-  // and opening extra windows for any files that it is asked to open,
-  // for instance as a command-line parameter.
-  // run() will return when the last window has been closed by the user.
-  const int status = application->run(argc, argv);
-  return status;
+  //Shows the window and returns when it is closed.
+  return app->make_window_and_run<ExampleWindow>(argc, argv, app);
 }

@@ -15,85 +15,135 @@
  */
 
 #include "examplewindow.h"
+#include <gtkmm.h>
 #include <iostream>
 
-ExampleWindow::ExampleWindow(int w, int h)
-: Gtk::ApplicationWindow(),
-  m_Box(Gtk::Orientation::VERTICAL)
+ExampleWindow::ExampleWindow(const Glib::RefPtr<Gtk::Application>& app)
+: m_Box(Gtk::Orientation::VERTICAL)
 {
-  set_title("Main menu example");
-  set_default_size(w, h);
+  set_title("main_menu example");
+  set_default_size(200, 200);
 
-  // ExampleApplication displays the menubar. Other stuff, such as a toolbar,
-  // is put into the box.
-  set_child(m_Box);
+  set_child(m_Box); //We can put a MenuBar at the top of the box and other stuff below it.
 
-  // Create actions for menus and toolbars.
-  // We can use add_action() because Gtk::ApplicationWindow derives from Gio::ActionMap.
-  // This Action Map uses a "win." prefix for the actions.
-  // Therefore, for instance, "win.copy", is used in ExampleApplication::on_startup()
-  // to layout the menu.
+  //Define the actions:
+  m_refActionGroup = Gio::SimpleActionGroup::create();
 
-  //Edit menu:
-  add_action("copy", sigc::mem_fun(*this, &ExampleWindow::on_menu_others));
-  add_action("paste", sigc::mem_fun(*this, &ExampleWindow::on_menu_others));
-  add_action("something", sigc::mem_fun(*this, &ExampleWindow::on_menu_others));
+  // There are several ways of calling a function that takes a sigc::slot.
+  // If the slot function is very short, it might be easy to skip the on_xxx()
+  // method and put its contents directly in a lambda expression.
+  m_refActionGroup->add_action("new",
+    [] { std::cout << "A File|New menu item was selected.\n"; /* on_action_file_new() */});
+  // With sigc::mem_fun() or (for non-member functions and static member functions)
+  // sigc::ptr_fun(). The only way before C++11 introduced lambda expressions.
+  m_refActionGroup->add_action("open",
+    sigc::mem_fun(*this, &ExampleWindow::on_action_others) );
 
-  //Choices menus, to demonstrate Radio items,
-  //using our convenience methods for string and int radio values:
-  m_refChoice = add_action_radio_string("choice",
-    sigc::mem_fun(*this, &ExampleWindow::on_menu_choices), "a");
+  // With a lambda expression. Does not disconnect automatically when ExampleWindow
+  // is deleted, like sigc::mem_fun() does.
+  m_refActionRain = m_refActionGroup->add_action_bool("rain",
+    [this] { on_action_toggle(); }, false);
 
-  m_refChoiceOther = add_action_radio_integer("choiceother",
-    sigc::mem_fun(*this, &ExampleWindow::on_menu_choices_other), 1);
+  m_refActionGroup->add_action("quit",
+    sigc::mem_fun(*this, &ExampleWindow::on_action_file_quit) );
 
-  m_refToggle = add_action_bool("sometoggle",
-    sigc::mem_fun(*this, &ExampleWindow::on_menu_toggle), false);
+  // With a lambda expression and sigc::track_obj() or sigc::track_object().
+  // Disconnects automatically like sigc::mem_fun().
+#if SIGCXX_MINOR_VERSION >= 4
+  m_refActionGroup->add_action("cut",
+    sigc::track_object([this] { on_action_others(); }, *this));
+#else
+  m_refActionGroup->add_action("cut",
+    sigc::track_obj([this] { on_action_others(); }, *this));
+#endif
+  m_refActionGroup->add_action("copy",
+    sigc::mem_fun(*this, &ExampleWindow::on_action_others) );
+  m_refActionGroup->add_action("paste",
+    sigc::mem_fun(*this, &ExampleWindow::on_action_others) );
 
-  //Help menu:
-  add_action("about", sigc::mem_fun(*this, &ExampleWindow::on_menu_others));
+  insert_action_group("example", m_refActionGroup);
 
-  //Create the toolbar and add it to a container widget:
-
+  //Define how the actions are presented in the menus and toolbars:
   m_refBuilder = Gtk::Builder::create();
 
-  Glib::ustring ui_info =
-    "<!-- Generated with glade 3.18.3 and then changed manually -->"
+  //Layout the actions in a menubar and toolbar:
+  const Glib::ustring ui_info =
     "<interface>"
-    "  <object class='GtkBox' id='toolbar'>"
-    "    <property name='can_focus'>False</property>"
-    "    <child>"
-    "      <object class='GtkButton' id='toolbutton_new'>"
-    "        <property name='can_focus'>False</property>"
-    "        <property name='tooltip_text' translatable='yes'>New Standard</property>"
-    "        <property name='action_name'>app.newstandard</property>"
-    "        <property name='icon_name'>document-new</property>"
-    "        <property name='hexpand'>False</property>"
-    "        <property name='vexpand'>False</property>"
-    "      </object>"
-    "    </child>"
-    "    <child>"
-    "      <object class='GtkButton' id='toolbutton_quit'>"
-    "        <property name='can_focus'>False</property>"
-    "        <property name='tooltip_text' translatable='yes'>Quit</property>"
-    "        <property name='action_name'>app.quit</property>"
-    "        <property name='icon_name'>application-exit</property>"
-    "        <property name='hexpand'>False</property>"
-    "        <property name='vexpand'>False</property>"
-    "      </object>"
-    "    </child>"
-    "  </object>"
+    "  <menu id='menubar'>"
+    "    <submenu>"
+    "      <attribute name='label' translatable='yes'>_File</attribute>"
+    "      <section>"
+    "        <item>"
+    "          <attribute name='label' translatable='yes'>_New</attribute>"
+    "          <attribute name='action'>example.new</attribute>"
+    "        </item>"
+    "        <item>"
+    "          <attribute name='label' translatable='yes'>_Open</attribute>"
+    "          <attribute name='action'>example.open</attribute>"
+    "        </item>"
+    "      </section>"
+    "      <section>"
+    "        <item>"
+    "          <attribute name='label' translatable='yes'>Rain</attribute>"
+    "          <attribute name='action'>example.rain</attribute>"
+    "        </item>"
+    "      </section>"
+    "      <section>"
+    "        <item>"
+    "          <attribute name='label' translatable='yes'>_Quit</attribute>"
+    "          <attribute name='action'>example.quit</attribute>"
+    "        </item>"
+    "      </section>"
+    "    </submenu>"
+    "    <submenu>"
+    "      <attribute name='label' translatable='yes'>_Edit</attribute>"
+    "      <item>"
+    "        <attribute name='label' translatable='yes'>_Cut</attribute>"
+    "        <attribute name='action'>example.cut</attribute>"
+    "      </item>"
+    "      <item>"
+    "        <attribute name='label' translatable='yes'>_Copy</attribute>"
+    "        <attribute name='action'>example.copy</attribute>"
+    "      </item>"
+    "      <item>"
+    "        <attribute name='label' translatable='yes'>_Paste</attribute>"
+    "        <attribute name='action'>example.paste</attribute>"
+    "      </item>"
+    "    </submenu>"
+    "  </menu>"
     "</interface>";
+
+  // Set accelerator keys:
+  app->set_accel_for_action("example.new", "<Primary>n");
+  app->set_accel_for_action("example.open", "<Primary>o");
+  app->set_accel_for_action("example.quit", "<Primary>q");
+  app->set_accel_for_action("example.cut", "<Primary>x");
+  app->set_accel_for_action("example.copy", "<Primary>c");
+  app->set_accel_for_action("example.paste", "<Primary>v");
 
   try
   {
     m_refBuilder->add_from_string(ui_info);
+    m_refBuilder->add_from_resource("/toolbar/toolbar.ui");
   }
-  catch (const Glib::Error& ex)
+  catch(const Glib::Error& ex)
   {
-    std::cerr << "Building toolbar failed: " <<  ex.what();
+    std::cerr << "Building menus and toolbar failed: " <<  ex.what();
   }
 
+  //Get the menubar:
+  auto gmenu = m_refBuilder->get_object<Gio::Menu>("menubar");
+  if (!gmenu)
+    g_warning("GMenu not found");
+  else
+  {
+    auto pMenuBar = Gtk::make_managed<Gtk::PopoverMenuBar>(gmenu);
+
+    //Add the PopoverMenuBar to the window:
+    m_Box.append(*pMenuBar);
+  }
+
+  //Get the toolbar and add it to a container widget:
   auto toolbar = m_refBuilder->get_widget<Gtk::Box>("toolbar");
   if (!toolbar)
     g_warning("toolbar not found");
@@ -105,53 +155,37 @@ ExampleWindow::~ExampleWindow()
 {
 }
 
-void ExampleWindow::on_menu_others()
+void ExampleWindow::on_action_file_quit()
+{
+  close();
+}
+
+//void ExampleWindow::on_action_file_new()
+//{
+//   std::cout << "A File|New menu item was selected." << std::endl;
+//}
+
+void ExampleWindow::on_action_others()
 {
   std::cout << "A menu item was selected." << std::endl;
 }
 
-void ExampleWindow::on_menu_choices(const Glib::ustring& parameter)
+void ExampleWindow::on_action_toggle()
 {
-  //The radio action's state does not change automatically:
-  m_refChoice->change_state(parameter);
+  std::cout << "The toggle menu item was selected." << std::endl;
 
-  Glib::ustring message;
-  if (parameter == "a")
-    message = "Choice a was selected.";
-  else
-    message = "Choice b was selected.";
-
-  std::cout << message << std::endl;
-}
-
-void ExampleWindow::on_menu_choices_other(int parameter)
-{
-  //The radio action's state does not change automatically:
-  m_refChoiceOther->change_state(parameter);
-
-  Glib::ustring message;
-  if (parameter == 1)
-    message = "Choice 1 was selected.";
-  else
-    message = "Choice 2 was selected.";
-
-  std::cout << message << std::endl;
-}
-
-void ExampleWindow::on_menu_toggle()
-{
   bool active = false;
-  m_refToggle->get_state(active);
+  m_refActionRain->get_state(active);
 
   //The toggle action's state does not change automatically:
   active = !active;
-  m_refToggle->change_state(active);
+  m_refActionRain->change_state(active);
 
   Glib::ustring message;
-  if (active)
+  if(active)
     message = "Toggle is active.";
   else
-    message = "Toggle is not active.";
+    message = "Toggle is not active";
 
   std::cout << message << std::endl;
 }

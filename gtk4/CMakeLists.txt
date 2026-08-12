@@ -14,8 +14,6 @@ pkg_check_modules(GTKMM REQUIRED IMPORTED_TARGET gtkmm-4.0)
 # Declare all the source files belonging to the main_menu example
 set(SOURCE_FILES
     main.cc
-    exampleapplication.h
-    exampleapplication.cc
     examplewindow.h
     examplewindow.cc
 )
