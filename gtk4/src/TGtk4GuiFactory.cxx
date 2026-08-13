@@ -20,6 +20,7 @@ For Gtk4 it provides specialization for TCanvasImp and TContextMenuImp classes
 #include "TGtk4GuiFactory.h"
 
 #include "TGtk4Canvas.h"
+#include "TGtk4ContextMenu.h"
 
 using namespace ROOT::Experimental;
 
@@ -62,7 +63,7 @@ TCanvasImp *TGtk4GuiFactory::CreateCanvasImp(TCanvas *c, const char *title,
 /// Create a ROOT native GUI version of TContextMenuImp
 
 TContextMenuImp *TGtk4GuiFactory::CreateContextMenuImp(TContextMenu *c,
-                                             const char *name, const char *arg)
+                                             const char *name, const char *)
 {
-   return TGuiFactory::CreateContextMenuImp(c, name, arg);
+   return new TGtk4ContextMenu(c, name);
 }

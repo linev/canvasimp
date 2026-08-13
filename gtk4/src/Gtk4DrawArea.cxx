@@ -60,6 +60,15 @@ Gtk4DrawArea::Gtk4DrawArea()
    );
 
    add_controller(m_scroll_controller);
+
+
+   auto menu_model = Gio::Menu::create();
+   menu_model->append("Edit Item", "menu.edit");
+   menu_model->append("Delete Item", "menu.delete");
+
+   m_context_menu = Gtk::make_managed<Gtk::PopoverMenu>(menu_model);
+   m_context_menu->set_parent(*this);
+   m_context_menu->set_has_arrow(false); // Removes the little popover triangle point
 }
 
 void Gtk4DrawArea::on_draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height)
@@ -138,6 +147,16 @@ void Gtk4DrawArea::on_mouse_released(int n_press, double x, double y)
       fCanvas->HandleInput(kButton2Up, (int) x, (int) y);
    } else if ((modifiers & Gdk::ModifierType::BUTTON3_MASK) == Gdk::ModifierType::BUTTON3_MASK) {
       fCanvas->HandleInput(kButton3Up, (int) x, (int) y);
+
+      /*
+      Gdk::Rectangle rect(x, y, 1, 1);
+
+      // 2. Snap the context menu anchor to this exact tiny point rectangle
+      m_context_menu->set_pointing_to(rect);
+
+      // 3. Open the popup menu smoothly on screen
+      m_context_menu->popup();
+      */
    }
 }
 
@@ -194,4 +213,21 @@ bool Gtk4DrawArea::on_mouse_scroll(double dx, double dy)
        fCanvas->HandleInput(dy > 0 ? kWheelUp : kWheelDown, (int) fLastMouseX, (int) fLastMouseY);
 
    return true;
+}
+
+
+void Gtk4DrawArea::ShowContextMenu(Glib::RefPtr<Gio::Menu> menu_model, int x, int y)
+{
+   auto menu = Gtk::make_managed<Gtk::PopoverMenu>(menu_model);
+   menu->set_parent(*this);
+   menu->set_has_arrow(false); // Removes the little popover triangle point
+
+   Gdk::Rectangle rect(x, y, 1, 1);
+
+   // 2. Snap the context menu anchor to this exact tiny point rectangle
+   menu->set_pointing_to(rect);
+
+   // 3. Open the popup menu smoothly on screen
+   menu->popup();
+
 }

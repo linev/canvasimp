@@ -25,6 +25,8 @@ public:
 
     Cairo::Context *GetContext() const { return fContext; }
 
+    void ShowContextMenu(Glib::RefPtr<Gio::Menu> menu_model, int x, int y);
+
 protected:
     // The render function for gtkmm 4
     void on_draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
@@ -33,6 +35,7 @@ protected:
     Cairo::Context *fContext = nullptr;
     double fLastMouseX = 0;
     double fLastMouseY = 0;
+    Gtk::PopoverMenu* m_context_menu = nullptr;
 
     void on_mouse_click(int n_press, double x, double y);
     void on_mouse_released(int n_press, double x, double y);
