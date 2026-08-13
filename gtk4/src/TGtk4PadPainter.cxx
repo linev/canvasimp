@@ -123,36 +123,28 @@ Bool_t TGtk4PadPainter::SetLinePen()
    SetGtk4Color(att.GetLineColor());
    ctx->set_line_width(att.GetLineWidth());
 
-   return kTRUE;
-
-/*
    auto style = att.GetLineStyle();
 
-   QPen customPen;
-   customPen.setColor(GetQColor(att.GetLineColor()));
-   customPen.setWidth(att.GetLineWidth());
-   customPen.setStyle(Qt::SolidLine);
-
    TString patt;
+   std::vector<double> pattern;
 
    if (style > 1)
       patt = gStyle->GetLineStyleString(style);
 
    if (patt.Length() > 2) {
-      QList<qreal> pattern;
       std::unique_ptr<TObjArray> tokens(patt.Tokenize(" "));
       for (Int_t j = 0; j < tokens->GetEntries(); j++) {
          int it = std::stoi(tokens->At(j)->GetName());
-         pattern.push_back(0.25 * it);
-      }
-      if (pattern.size() > 1) {
-         customPen.setStyle(Qt::CustomDashLine);
-         customPen.setDashPattern(pattern);
+         pattern.emplace_back(0.1 * it * att.GetLineWidth());
       }
    }
 
-   return customPen;
-*/
+   if (pattern.size() > 1)
+      ctx->set_dash(pattern, 0);
+   else
+      ctx->unset_dash();
+
+   return kTRUE;
 }
 
 
@@ -208,9 +200,9 @@ void TGtk4PadPainter::DrawLine(Double_t x1, Double_t y1, Double_t x2, Double_t y
    const Int_t py2 = gPad->YtoAbsPixel(y2);
 
    auto ctx = fDrawArea->GetContext();
-
    ctx->move_to(px1, py1);
    ctx->line_to(px2, py2);
+   ctx->stroke();
 }
 
 
@@ -230,6 +222,7 @@ void TGtk4PadPainter::DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_
    auto ctx = fDrawArea->GetContext();
    ctx->move_to(px1, py1);
    ctx->line_to(px2, py2);
+   ctx->stroke();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -262,10 +255,10 @@ void TGtk4PadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2
 
 void TGtk4PadPainter::DrawFillArea(Int_t nPoints, const Double_t *xs, const Double_t *ys)
 {
-   auto ctx = fDrawArea->GetContext();
-
-   if ((nPoints < 3) || !ctx)
+   if ((nPoints < 3) || !SetFillBrush())
       return;
+
+   auto ctx = fDrawArea->GetContext();
 
    for (Int_t n = 0; n < nPoints; ++n) {
       auto px = gPad->XtoAbsPixel(xs[n]);
@@ -278,8 +271,7 @@ void TGtk4PadPainter::DrawFillArea(Int_t nPoints, const Double_t *xs, const Doub
 
    ctx->close_path();
 
-   if (SetFillBrush())
-      ctx->fill();
+   ctx->fill();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -287,9 +279,10 @@ void TGtk4PadPainter::DrawFillArea(Int_t nPoints, const Double_t *xs, const Doub
 
 void TGtk4PadPainter::DrawFillArea(Int_t nPoints, const Float_t *xs, const Float_t *ys)
 {
-   auto ctx = fDrawArea->GetContext();
-   if ((nPoints < 3) || !ctx)
+   if ((nPoints < 3) || !SetFillBrush())
       return;
+
+   auto ctx = fDrawArea->GetContext();
 
    for (Int_t n = 0; n < nPoints; ++n) {
       auto px = gPad->XtoAbsPixel(xs[n]);
@@ -302,8 +295,7 @@ void TGtk4PadPainter::DrawFillArea(Int_t nPoints, const Float_t *xs, const Float
 
    ctx->close_path();
 
-   if (SetFillBrush())
-      ctx->fill();
+   ctx->fill();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -311,9 +303,10 @@ void TGtk4PadPainter::DrawFillArea(Int_t nPoints, const Float_t *xs, const Float
 
 void TGtk4PadPainter::DrawPolyLine(Int_t nPoints, const Double_t *xs, const Double_t *ys)
 {
-   auto ctx = fDrawArea->GetContext();
-   if ((nPoints < 2) || !ctx)
+   if ((nPoints < 2) || !SetLinePen())
       return;
+
+   auto ctx = fDrawArea->GetContext();
 
    for (Int_t n = 0; n < nPoints; ++n) {
       auto px = gPad->XtoAbsPixel(xs[n]);
@@ -324,8 +317,7 @@ void TGtk4PadPainter::DrawPolyLine(Int_t nPoints, const Double_t *xs, const Doub
          ctx->line_to(px, py);
    }
 
-   if (SetLinePen())
-      ctx->stroke();
+   ctx->stroke();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -333,9 +325,10 @@ void TGtk4PadPainter::DrawPolyLine(Int_t nPoints, const Double_t *xs, const Doub
 
 void TGtk4PadPainter::DrawPolyLine(Int_t nPoints, const Float_t *xs, const Float_t *ys)
 {
-   auto ctx = fDrawArea->GetContext();
-   if ((nPoints < 2) || !ctx)
+   if ((nPoints < 2) || !SetLinePen())
       return;
+
+   auto ctx = fDrawArea->GetContext();
 
    for (Int_t n = 0; n < nPoints; ++n) {
       auto px = gPad->XtoAbsPixel(xs[n]);
@@ -346,8 +339,7 @@ void TGtk4PadPainter::DrawPolyLine(Int_t nPoints, const Float_t *xs, const Float
          ctx->line_to(px, py);
    }
 
-   if (SetLinePen())
-      ctx->stroke();
+   ctx->stroke();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -355,9 +347,10 @@ void TGtk4PadPainter::DrawPolyLine(Int_t nPoints, const Float_t *xs, const Float
 
 void TGtk4PadPainter::DrawPolyLineNDC(Int_t nPoints, const Double_t *u, const Double_t *v)
 {
-   auto ctx = fDrawArea->GetContext();
-   if ((nPoints < 2) || !ctx)
+   if ((nPoints < 2) || !SetLinePen())
       return;
+
+   auto ctx = fDrawArea->GetContext();
 
    for (Int_t n = 0; n < nPoints; ++n) {
       auto px = gPad->UtoAbsPixel(u[n]);
@@ -368,8 +361,7 @@ void TGtk4PadPainter::DrawPolyLineNDC(Int_t nPoints, const Double_t *u, const Do
          ctx->line_to(px, py);
    }
 
-   if (SetLinePen())
-      ctx->stroke();
+   ctx->stroke();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
