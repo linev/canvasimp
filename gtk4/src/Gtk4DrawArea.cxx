@@ -11,17 +11,55 @@
 #include "Gtk4DrawArea.h"
 
 #include <cmath>
+#include <iostream>
 
 #include "TGtk4PadPainter.h"
 #include "TCanvas.h"
 
+#include <gtkmm.h>
 
 Gtk4DrawArea::Gtk4DrawArea()
 {
-    // Bind the member function as the draw function
-    set_draw_func(sigc::mem_fun(*this, &Gtk4DrawArea::on_draw));
+   // Bind the member function as the draw function
+   set_draw_func(sigc::mem_fun(*this, &Gtk4DrawArea::on_draw));
 
-    set_expand(true);
+   set_expand(true);
+
+   m_click_gesture = Gtk::GestureClick::create();
+   m_click_gesture->set_button(0);
+   m_click_gesture->signal_pressed().connect(
+       sigc::mem_fun(*this, &Gtk4DrawArea::on_mouse_click)
+   );
+   m_click_gesture->signal_released().connect(
+       sigc::mem_fun(*this, &Gtk4DrawArea::on_mouse_released)
+   );
+   add_controller(m_click_gesture);
+
+   // 2. Create and attach the motion event controller
+   m_motion_controller = Gtk::EventControllerMotion::create();
+   m_motion_controller->signal_motion().connect(
+      sigc::mem_fun(*this, &Gtk4DrawArea::on_mouse_move)
+   );
+
+   m_motion_controller->signal_enter().connect(
+        sigc::mem_fun(*this, &Gtk4DrawArea::on_mouse_enter)
+    );
+
+    // 3. Connect the leave signal
+    m_motion_controller->signal_leave().connect(
+        sigc::mem_fun(*this, &Gtk4DrawArea::on_mouse_leave)
+    );
+   add_controller(m_motion_controller);
+
+   m_scroll_controller = Gtk::EventControllerScroll::create();
+   m_scroll_controller->set_flags(Gtk::EventControllerScroll::Flags::VERTICAL);
+
+   m_scroll_controller->signal_scroll().connect(
+      sigc::mem_fun(*this, &Gtk4DrawArea::on_mouse_scroll),
+      false // Run during the capture phase? False means bubble phase (standard)
+   );
+
+   add_controller(m_scroll_controller);
 }
 
 void Gtk4DrawArea::on_draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height)
@@ -56,4 +94,104 @@ void Gtk4DrawArea::on_draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
     fCanvas->Paint();
 
     fContext = nullptr;
+}
+
+void Gtk4DrawArea::on_mouse_click(int n_press, double x, double y)
+{
+   if (!fCanvas)
+      return;
+
+   Gdk::ModifierType modifiers = m_click_gesture->get_current_event_state();
+
+   std::cout << "Mouse cursor clicked X=" << x << ", Y=" << y << "\n";
+
+   if ((modifiers & Gdk::ModifierType::BUTTON1_MASK) == Gdk::ModifierType::BUTTON1_MASK) {
+      if (n_press > 1)
+         fCanvas->HandleInput(kButton1Double, (int) x, (int) y);
+      else
+         fCanvas->HandleInput(kButton1Down, (int) x, (int) y);
+   } else if ((modifiers & Gdk::ModifierType::BUTTON2_MASK) == Gdk::ModifierType::BUTTON2_MASK) {
+      if (n_press > 1)
+         fCanvas->HandleInput(kButton2Double, (int) x, (int) y);
+      else
+         fCanvas->HandleInput(kButton2Down, (int) x, (int) y);
+   } else if ((modifiers & Gdk::ModifierType::BUTTON3_MASK) == Gdk::ModifierType::BUTTON3_MASK) {
+      if (n_press > 1)
+         fCanvas->HandleInput(kButton3Double, (int) x, (int) y);
+      else
+         fCanvas->HandleInput(kButton3Down, (int) x, (int) y);
+   }
+}
+
+void Gtk4DrawArea::on_mouse_released(int n_press, double x, double y)
+{
+   if (!fCanvas)
+      return;
+
+   Gdk::ModifierType modifiers = m_click_gesture->get_current_event_state();
+
+   std::cout << "Mouse released X=" << x << ", Y=" << y << "\n";
+
+   if ((modifiers & Gdk::ModifierType::BUTTON1_MASK) == Gdk::ModifierType::BUTTON1_MASK) {
+      fCanvas->HandleInput(kButton1Up, (int) x, (int) y);
+   } else if ((modifiers & Gdk::ModifierType::BUTTON2_MASK) == Gdk::ModifierType::BUTTON2_MASK) {
+      fCanvas->HandleInput(kButton2Up, (int) x, (int) y);
+   } else if ((modifiers & Gdk::ModifierType::BUTTON3_MASK) == Gdk::ModifierType::BUTTON3_MASK) {
+      fCanvas->HandleInput(kButton3Up, (int) x, (int) y);
+   }
+}
+
+
+void Gtk4DrawArea::on_mouse_enter(double x, double y)
+{
+   std::cout << "Mouse ENTER to: X=" << x << ", Y=" << y << "\n";
+   fLastMouseX = x;
+   fLastMouseY = y;
+
+   if (fCanvas)
+      fCanvas->HandleInput(kMouseEnter, (int) x, (int) y);
+}
+
+void Gtk4DrawArea::on_mouse_leave()
+{
+   std::cout << "Mouse LEAVE\n";
+   if (fCanvas)
+      fCanvas->HandleInput(kMouseLeave, 0, 0);
+}
+
+
+// Callback handles mouse movements
+void Gtk4DrawArea::on_mouse_move(double x, double y)
+{
+   if (!fCanvas)
+      return;
+
+   fLastMouseX = x;
+   fLastMouseY = y;
+
+   Gdk::ModifierType modifiers = m_motion_controller->get_current_event_state();
+
+   // Check if the left mouse button (Button 1) is held down
+   if ((modifiers & Gdk::ModifierType::BUTTON1_MASK) == Gdk::ModifierType::BUTTON1_MASK) {
+      fCanvas->HandleInput(kButton1Motion, (int) x, (int) y);
+
+        std::cout << "Left button held down at position: " << x << ", " << y << std::endl;
+   } else if ((modifiers & Gdk::ModifierType::BUTTON3_MASK) == Gdk::ModifierType::BUTTON3_MASK) {
+      fCanvas->HandleInput(kButton3Motion, (int) x, (int) y);
+       std::cout << "Right button held down at position: " << x << ", " << y << std::endl;
+   } else {
+      std::cout << "Mouse cursor moved to: X=" << x << ", Y=" << y << "\n";
+
+      fCanvas->HandleInput(kMouseMotion, (int) x, (int) y);
+   }
+}
+
+bool Gtk4DrawArea::on_mouse_scroll(double dx, double dy)
+{
+   std::cout << "On mouse scroll dy = " << dy << "\n";
+
+    if (fCanvas)
+       fCanvas->HandleInput(dy > 0 ? kWheelUp : kWheelDown, (int) fLastMouseX, (int) fLastMouseY);
+
+   return true;
 }

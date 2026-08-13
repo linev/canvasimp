@@ -11,7 +11,7 @@
 #ifndef ROOT_Gtk4DrawArea_H
 #define ROOT_Gtk4DrawArea_H
 
-#include <gtkmm/drawingarea.h>
+#include <gtkmm.h>
 #include <cairomm/context.h>
 
 class TCanvas;
@@ -31,6 +31,19 @@ protected:
 
     TCanvas *fCanvas = nullptr;
     Cairo::Context *fContext = nullptr;
+    double fLastMouseX = 0;
+    double fLastMouseY = 0;
+
+    void on_mouse_click(int n_press, double x, double y);
+    void on_mouse_released(int n_press, double x, double y);
+    void on_mouse_enter(double x, double y);
+    void on_mouse_move(double x, double y);
+    void on_mouse_leave();
+    bool on_mouse_scroll(double dx, double dy);
+
+    Glib::RefPtr<Gtk::GestureClick> m_click_gesture;
+    Glib::RefPtr<Gtk::EventControllerMotion> m_motion_controller;
+    Glib::RefPtr<Gtk::EventControllerScroll> m_scroll_controller;
 };
 
 #endif
