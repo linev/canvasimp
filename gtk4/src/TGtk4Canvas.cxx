@@ -205,7 +205,7 @@ void TGtk4Canvas::GetCanvasGeometry(Int_t wid, UInt_t &w, UInt_t &h)
       w = 780;
       h = 580;
    }
-   printf("CanvasGeometry %u %u\n", w, h);
+   // printf("CanvasGeometry %u %u\n", w, h);
 }
 
 
@@ -225,7 +225,7 @@ UInt_t TGtk4Canvas::GetWindowGeometry(Int_t &x, Int_t &y, UInt_t &w, UInt_t &h)
       h = 600;
    }
 
-   printf("WindowGeometry %u %u\n", w, h);
+   // printf("WindowGeometry %u %u\n", w, h);
 
    return 0;
 }
@@ -264,6 +264,7 @@ void TGtk4Canvas::ForceUpdate()
 
 
 Glib::RefPtr<Glib::MainContext> gt4k_context;
+Glib::RefPtr<Gtk::Application> gt4k_app;
 
 class TGtk4Timer : public TTimer {
 public:
@@ -289,7 +290,10 @@ TCanvasImp *TGtk4Canvas::NewCanvas(TCanvas *c, const char *name, Int_t x, Int_t 
 {
    static TGtk4Timer *timer = nullptr;
    if (!timer) {
-      gtk_init();
+
+      Glib::init();
+
+      gt4k_app = Gtk::Application::create("org.example.customloop");
 
       gt4k_context = Glib::MainContext::get_default();
 
@@ -299,18 +303,11 @@ TCanvasImp *TGtk4Canvas::NewCanvas(TCanvas *c, const char *name, Int_t x, Int_t 
 
    auto widget = new Gtk4CanvasWindow(width, height);
 
-   //widget->setWindowTitle(QString(c->GetTitle()));
-   //if ((x < 0) && (y < 0))
-   //   widget->resize(width, height);
-   //else
-   //   widget->setGeometry(x, y, width, height);
-
    auto draw_area = widget->GetDrawArea();
 
    draw_area->queue_draw();
 
    widget->present();
-
 
    // workaround to let gtk4 time for first rendering of the widget
    int cnt = 100;
@@ -318,8 +315,6 @@ TCanvasImp *TGtk4Canvas::NewCanvas(TCanvas *c, const char *name, Int_t x, Int_t 
       while (gt4k_context->pending())
          gt4k_context->iteration(false);
    }
-
-   printf("  ---- now here ----\n");
 
 
    auto imp = new TGtk4Canvas(c, name, x, y, width, height);

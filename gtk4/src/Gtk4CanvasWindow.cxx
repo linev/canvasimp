@@ -27,8 +27,11 @@
 #include "Gtk4CanvasWindow.h"
 
 #include <gtkmm.h>
-#include <gtkmm/statusbar.h>
 #include <iostream>
+
+#include "TROOT.h"
+#include "TTimer.h"
+#include "TApplication.h"
 
 Gtk4CanvasWindow::Gtk4CanvasWindow(unsigned width, unsigned height)
 : m_Box(Gtk::Orientation::VERTICAL)
@@ -38,154 +41,93 @@ Gtk4CanvasWindow::Gtk4CanvasWindow(unsigned width, unsigned height)
 
   set_child(m_Box); //We can put a MenuBar at the top of the box and other stuff below it.
 
-  //Define the actions:
-  m_refActionGroup = Gio::SimpleActionGroup::create();
+  m_action_group = Gio::SimpleActionGroup::create();
 
-  // There are several ways of calling a function that takes a sigc::slot.
-  // If the slot function is very short, it might be easy to skip the on_xxx()
-  // method and put its contents directly in a lambda expression.
-  m_refActionGroup->add_action("new",
-    [] { std::cout << "A File|New menu item was selected.\n"; /* on_action_file_new() */});
-  // With sigc::mem_fun() or (for non-member functions and static member functions)
-  // sigc::ptr_fun(). The only way before C++11 introduced lambda expressions.
-  m_refActionGroup->add_action("open",
-    sigc::mem_fun(*this, &Gtk4CanvasWindow::on_action_others) );
+  m_action_group->add_action("new", []() { std::cout << "New canvas Clicked!\n"; });
+  m_action_group->add_action("open", []() { std::cout << "Open File Clicked!\n"; });
 
-  // With a lambda expression. Does not disconnect automatically when Gtk4CanvasWindow
-  // is deleted, like sigc::mem_fun() does.
-  m_refActionRain = m_refActionGroup->add_action_bool("rain",
-    [this] { on_action_toggle(); }, false);
+  m_action_group->add_action("close", [this]() { close(); });
+  m_action_group->add_action("quit", []() {
 
-  m_refActionGroup->add_action("quit",
-    sigc::mem_fun(*this, &Gtk4CanvasWindow::on_action_file_quit) );
+    printf("Quit ROOT action\n");
+     gROOT->SetInterrupt(kTRUE);
 
-  // With a lambda expression and sigc::track_obj() or sigc::track_object().
-  // Disconnects automatically like sigc::mem_fun().
-#if SIGCXX_MINOR_VERSION >= 4
-  m_refActionGroup->add_action("cut",
-    sigc::track_object([this] { on_action_others(); }, *this));
-#else
-  m_refActionGroup->add_action("cut",
-    sigc::track_obj([this] { on_action_others(); }, *this));
-#endif
-  m_refActionGroup->add_action("copy",
-    sigc::mem_fun(*this, &Gtk4CanvasWindow::on_action_others) );
-  m_refActionGroup->add_action("paste",
-    sigc::mem_fun(*this, &Gtk4CanvasWindow::on_action_others) );
+     if (gApplication)
+        TTimer::SingleShot(100, "TApplication",  gApplication, "Terminate()");
+  });
 
-  insert_action_group("example", m_refActionGroup);
+  // Bind actions to an identifier prefix name string ("win.new", "win.copy", etc.)
+  insert_action_group("win", m_action_group);
 
-  //Define how the actions are presented in the menus and toolbars:
-  m_refBuilder = Gtk::Builder::create();
+  // 3. Construct the Abstract Menu Tree Model
+  auto menu_model = Gio::Menu::create();
 
-  //Layout the actions in a menubar and toolbar:
-  const Glib::ustring ui_info =
-    "<interface>"
-    "  <menu id='menubar'>"
-    "    <submenu>"
-    "      <attribute name='label' translatable='yes'>_File</attribute>"
-    "      <section>"
-    "        <item>"
-    "          <attribute name='label' translatable='yes'>_New</attribute>"
-    "          <attribute name='action'>example.new</attribute>"
-    "        </item>"
-    "        <item>"
-    "          <attribute name='label' translatable='yes'>_Open</attribute>"
-    "          <attribute name='action'>example.open</attribute>"
-    "        </item>"
-    "      </section>"
-    "      <section>"
-    "        <item>"
-    "          <attribute name='label' translatable='yes'>Rain</attribute>"
-    "          <attribute name='action'>example.rain</attribute>"
-    "        </item>"
-    "      </section>"
-    "      <section>"
-    "        <item>"
-    "          <attribute name='label' translatable='yes'>_Quit</attribute>"
-    "          <attribute name='action'>example.quit</attribute>"
-    "        </item>"
-    "      </section>"
-    "    </submenu>"
-    "    <submenu>"
-    "      <attribute name='label' translatable='yes'>_Edit</attribute>"
-    "      <item>"
-    "        <attribute name='label' translatable='yes'>_Cut</attribute>"
-    "        <attribute name='action'>example.cut</attribute>"
-    "      </item>"
-    "      <item>"
-    "        <attribute name='label' translatable='yes'>_Copy</attribute>"
-    "        <attribute name='action'>example.copy</attribute>"
-    "      </item>"
-    "      <item>"
-    "        <attribute name='label' translatable='yes'>_Paste</attribute>"
-    "        <attribute name='action'>example.paste</attribute>"
-    "      </item>"
-    "    </submenu>"
-    "  </menu>"
-    "</interface>";
+  // --- SECTION A: The "File" Top Level Dropdown Menu ---
 
-  try
-  {
-    m_refBuilder->add_from_string(ui_info);
-  }
-  catch(const Glib::Error& ex)
-  {
-    std::cerr << "Building menus and toolbar failed: " <<  ex.what();
-  }
+  auto sec1 = Gio::Menu::create();
+  sec1->append("New Canvas", "win.new");
+  sec1->append("Open", "win.open");
+  sec1->append("Close Canvas", "win.close");
+
+  auto sec2 = Gio::Menu::create();
+  sec2->append("Save", "win.save");
+  sec2->append("Save as", "win.saveas");
+
+  auto sec3 = Gio::Menu::create();
+  sec3->append("Quit ROOT", "win.quit");
+
+  auto file_menu = Gio::Menu::create();
+  file_menu->append_section(sec1);
+  file_menu->append_section(sec2);
+  file_menu->append_section(sec3);
 
 
-  //Get the menubar:
-  auto gmenu = m_refBuilder->get_object<Gio::Menu>("menubar");
-  if (!gmenu)
-    g_warning("GMenu not found");
-  else
-  {
-    auto pMenuBar = Gtk::make_managed<Gtk::PopoverMenuBar>(gmenu);
+  // Attach File structure onto root Menu Model Bar
+  menu_model->append_submenu("File", file_menu);
 
-    //Add the PopoverMenuBar to the window:
-    m_Box.append(*pMenuBar);
-  }
+  // --- SECTION B: The "Edit" Top Level Dropdown Menu ---
+  auto edit_menu = Gio::Menu::create();
+  edit_menu->append("Clear pad", "win.clearpad");
+  edit_menu->append("Clear canvas", "win.clearcanvas");
+
+  // CREATE A SUB-MENU ITEM (Nested Layer)
+  auto special_paste_submenu = Gio::Menu::create();
+  special_paste_submenu->append("Paste Text Only", "win.paste");
+  special_paste_submenu->append("Paste with Formatting", "win.paste");
+
+  // Nest the submenu inside the parent Edit menu container
+  edit_menu->append_submenu("Paste Special...", special_paste_submenu);
+
+  // Attach Edit structure onto root Menu Model Bar
+  menu_model->append_submenu("Edit", edit_menu);
+
+  // 4. Instantiate the PopoverMenuBar from our structured menu tree
+  // Gtk::PopoverMenuBar requires a Glib::RefPtr<Gio::MenuModel>
+  auto menu_bar = Gtk::make_managed<Gtk::PopoverMenuBar>(menu_model);
+
+  // 5. Append the layout widget to the window canvas
+  m_Box.append(*menu_bar);
 
 
-  fDrawArea = Gtk::make_managed<Gtk4DrawArea>();
-  fDrawArea->set_hexpand(true);
-  fDrawArea->set_vexpand(true);
-  m_Box.append(*fDrawArea);
+  m_DrawArea.set_hexpand(true);
+  m_DrawArea.set_vexpand(true);
+  m_Box.append(m_DrawArea);
 
 
-
-  fStatusBar = Gtk::make_managed<Gtk::Statusbar>();
-  unsigned int context_id = fStatusBar->get_context_id("main_status");
-  fStatusBar->push("Ready to draw", context_id);
-  m_Box.append(*fStatusBar);
+  unsigned int context_id = m_StatusBar.get_context_id("main_status");
+  m_StatusBar.push("Ready to draw", context_id);
+  m_Box.append(m_StatusBar);
 }
 
 Gtk4CanvasWindow::~Gtk4CanvasWindow()
 {
 }
 
-void Gtk4CanvasWindow::size_allocate_vfunc(int width, int height, int baseline)
-{
-   std::cout << "Widget was drawn/allocated at: " << width << " x " << height << " px" << std::endl;
-   std::cout << "Widget report : " << get_width() << " x " << get_height() << " px" << std::endl;
-}
-
-
+/*
 
 void Gtk4CanvasWindow::on_action_file_quit()
 {
   close();
-}
-
-//void Gtk4CanvasWindow::on_action_file_new()
-//{
-//   std::cout << "A File|New menu item was selected." << std::endl;
-//}
-
-void Gtk4CanvasWindow::on_action_others()
-{
-  std::cout << "A menu item was selected." << std::endl;
 }
 
 void Gtk4CanvasWindow::on_action_toggle()
@@ -206,4 +148,7 @@ void Gtk4CanvasWindow::on_action_toggle()
     message = "Toggle is not active";
 
   std::cout << message << std::endl;
+
 }
+
+*/

@@ -37,29 +37,24 @@ public:
   Gtk4CanvasWindow(unsigned width = 400, unsigned height = 200);
   virtual ~Gtk4CanvasWindow();
 
-  Gtk4DrawArea *GetDrawArea() const { return fDrawArea; }
-
-protected:
-   void size_allocate_vfunc (int width, int height, int baseline) override;
+  Gtk4DrawArea *GetDrawArea() { return &m_DrawArea; }
 
 private:
   //Signal handlers:
   //void on_action_file_new();
-  void on_action_file_quit();
-  void on_action_others();
-  void on_action_toggle();
+  //void on_action_file_quit();
+  //void on_action_others();
+  //void on_action_toggle();
 
 
   //Child widgets:
   Gtk::Box m_Box;
 
+  Glib::RefPtr<Gio::SimpleActionGroup> m_action_group;
 
-  Gtk4DrawArea *fDrawArea = nullptr;
-  Gtk::Statusbar *fStatusBar = nullptr;
+  Gtk4DrawArea  m_DrawArea;
+  Gtk::Statusbar m_StatusBar;
 
-  Glib::RefPtr<Gtk::Builder> m_refBuilder;
-  Glib::RefPtr<Gio::SimpleActionGroup> m_refActionGroup;
-  Glib::RefPtr<Gio::SimpleAction> m_refActionRain;
 };
 
 #endif //GTKMM_Gtk4CanvasWindow_H
