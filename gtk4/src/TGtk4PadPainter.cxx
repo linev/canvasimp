@@ -624,23 +624,36 @@ QString TGtk4PadPainter::GetFontFamily(Font_t fontnumber)
 
 */
 
+Bool_t TGtk4PadPainter::SelectFont(Font_t id, Float_t size)
+{
+   auto ctx = fDrawArea->GetContext();
+   if (!ctx)
+      return kFALSE;
+
+   ctx->select_font_face("Arial", Cairo::ToyFontFace::Slant::NORMAL, Cairo::ToyFontFace::Weight::NORMAL);
+
+   Int_t pixelsize = (Int_t) (size*kScale+0.5);
+
+   ctx->set_font_size(pixelsize);
+
+   return kTRUE;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Actual text painting image
 
 void TGtk4PadPainter::PaintGtk4String(int x, int y, const char *s)
 {
-   auto ctx = fDrawArea->GetContext();
-   if (!ctx)
-      return;
-
    const TAttText &att = GetAttText();
-
-
 
    auto textsize = att.GetTextSizePixels(*gPad);
 
-   ctx->select_font_face("Arial", Cairo::ToyFontFace::Slant::NORMAL, Cairo::ToyFontFace::Weight::NORMAL);
-   ctx->set_font_size(textsize);
+   if (!SelectFont(att.GetTextFont(), textsize))
+      return;
+
+
+   auto ctx = fDrawArea->GetContext();
 
    Cairo::TextExtents extents;
    ctx->get_text_extents(s, extents);
@@ -651,64 +664,22 @@ void TGtk4PadPainter::PaintGtk4String(int x, int y, const char *s)
    switch (txalh) {
       case 0:
       case 1: break; //left
-      case 2: x -= extents.width / 2; break; //center
-      case 3: x -= extents.width; break; //right
+      case 2: x -= extents.width / 2 + extents.x_bearing; break; //center
+      case 3: x -= extents.width + extents.x_bearing; break; //right
    }
 
    switch (txalv) {
       case 1: break; //bottom
-      case 2: y += extents.height / 2; break; // middle
-      case 3: y += extents.height; break; //top
+      case 2: y -= extents.height / 2 + extents.y_bearing; break; // middle
+      case 3: y -= extents.height + extents.y_bearing; break; //top
    }
 
    ctx->move_to(x, y);
 
    SetGtk4Color(att.GetTextColor());
+
    ctx->show_text(s);
-
-/*
-
-   auto family = GetFontFamily(att.GetTextFont());
-   if (family.isEmpty())
-      return;
-
-   auto textsize = att.GetTextSizePixels(*gPad);
-   Int_t pixelsize = (Int_t) (textsize*kScale+0.5);
-
-   painter->setFont(QFont(family, pixelsize));
-
-   painter->setPen(GetQColor(att.GetTextColor()));
-
-   Int_t txalh = att.GetTextAlign() / 10;
-   Int_t txalv = att.GetTextAlign() % 10;
-
-   auto fm = painter->fontMetrics();
-
-   switch (txalh) {
-      case 0:
-      case 1: break; //left
-      case 2: x -= fm.horizontalAdvance(s) / 2; break; //center
-      case 3: x -= fm.horizontalAdvance(s); break; //right
-   }
-
-   switch (txalv) {
-      case 1: break; //bottom
-      case 2: y += fm.height() / 2; break; // middle
-      case 3: y += fm.height(); break; //top
-   }
-
-   if (att.GetTextAngle() == 0) {
-      // Just draw text
-      painter->drawText(x, y, s);
-   } else {
-      // Draw with rotation
-      painter->save();
-      painter->translate(x, y);
-      painter->rotate(-att.GetTextAngle());
-      painter->drawText(0, 0, s);
-      painter->restore();
-   }
-   */
+   // TODO: handle rotation
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -716,18 +687,15 @@ void TGtk4PadPainter::PaintGtk4String(int x, int y, const char *s)
 
 void TGtk4PadPainter::GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const char *mess)
 {
-/*   auto family = GetFontFamily(font);
-   if (family.isEmpty())
+   if (!SelectFont(font, size))
       return;
 
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
+   auto ctx = fDrawArea->GetContext();
 
-   QFontMetrics fm(QFont(family, pixelsize));
-   QRect rect = fm.boundingRect(QString::fromLatin1(mess));
-
-   w = rect.width();
-   h = rect.height();
-*/
+   Cairo::TextExtents extents;
+   ctx->get_text_extents(mess, extents);
+   w = extents.width;
+   h = extents.height;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -735,19 +703,15 @@ void TGtk4PadPainter::GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_
 
 void TGtk4PadPainter::GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const wchar_t *mess)
 {
-   /*
-   auto family = GetFontFamily(font);
-   if (family.isEmpty())
+   if (!SelectFont(font, size))
       return;
 
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
+   auto ctx = fDrawArea->GetContext();
 
-   QFontMetrics fm(QFont(family, pixelsize));
-   QRect rect = fm.boundingRect(QString::fromWCharArray(mess));
-
-   w = rect.width();
-   h = rect.height();
-   */
+   Cairo::TextExtents extents;
+   ctx->get_text_extents("Any text", extents);
+   w = extents.width;
+   h = extents.height;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -755,19 +719,19 @@ void TGtk4PadPainter::GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_
 
 void TGtk4PadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const char *mess)
 {
-   /*
-   auto family = GetFontFamily(font);
-   if (family.isEmpty())
+   if (!SelectFont(font, size)) {
+      a = d = 0;
       return;
+   }
 
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
+   auto ctx = fDrawArea->GetContext();
 
-   QFontMetrics fm(QFont(family, pixelsize));
-   QRect rect = fm.boundingRect(QString::fromLatin1(mess));
+   Cairo::FontExtents font_metrics;
 
-   a = -rect.top();
-   d = rect.bottom();
-   */
+   ctx->get_font_extents(font_metrics);
+
+   a = font_metrics.ascent;
+   d = font_metrics.descent;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -775,34 +739,32 @@ void TGtk4PadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a
 
 void TGtk4PadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const wchar_t *mess)
 {
-   /*
-   auto family = GetFontFamily(font);
-   if (family.isEmpty())
+   if (!SelectFont(font, size)) {
+      a = d = 0;
       return;
+   }
 
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
+   auto ctx = fDrawArea->GetContext();
 
-   QFontMetrics fm(QFont(family, pixelsize));
-   QRect rect = fm.boundingRect(QString::fromWCharArray(mess));
+   Cairo::FontExtents font_metrics;
 
-   a = -rect.top();
-   d = rect.bottom();
-   */
+   ctx->get_font_extents(font_metrics);
+
+   a = font_metrics.ascent;
+   d = font_metrics.descent;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Returns text advance
 
-UInt_t TGtk4PadPainter::GetTextAdvance(Font_t font, Double_t size, const char *text, Bool_t)
+UInt_t TGtk4PadPainter::GetTextAdvance(Font_t font, Double_t size, const char *mess, Bool_t)
 {
-   /*
-   auto family = GetFontFamily(font);
-   if (family.isEmpty())
+   if (!SelectFont(font, size))
       return 0;
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
 
-   QFontMetrics fm(QFont(family, pixelsize));
-   return fm.horizontalAdvance(QString::fromLatin1(text));
-   */
-   return 0;
+   auto ctx = fDrawArea->GetContext();
+
+   Cairo::TextExtents extents;
+   ctx->get_text_extents(mess, extents);
+   return extents.x_advance;
 }

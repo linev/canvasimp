@@ -31,6 +31,9 @@ protected:
    void SetGtk4Color(Color_t id);
    Bool_t SetLinePen();
    Bool_t SetFillBrush();
+   Bool_t SelectFont(Font_t id, Float_t size);
+
+
 
    void PaintGtk4String(int x, int y, const char *s);
 

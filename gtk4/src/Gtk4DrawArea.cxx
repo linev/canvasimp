@@ -38,8 +38,12 @@ void Gtk4DrawArea::on_draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
        return;
     }
 
-    if ((width != fCanvas->GetPadWidth()) || (height != fCanvas->GetPadHeight()))
+    if ((width != fCanvas->GetPadWidth()) || (height != fCanvas->GetPadHeight())) {
        fCanvas->Resize();
+       // printf("After resize user coordinates pX %d pY %d  relative coordinates pX %d pY %d\n",
+       //        fCanvas->XtoAbsPixel(0.5), fCanvas->YtoAbsPixel(0.5),
+       //         fCanvas->UtoAbsPixel(0.5), fCanvas->VtoAbsPixel(0.5));
+    }
 
 
     // clear
