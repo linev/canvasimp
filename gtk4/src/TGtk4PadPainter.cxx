@@ -158,31 +158,64 @@ Bool_t TGtk4PadPainter::SetFillBrush()
       return kFALSE;
 
    auto &att = GetAttFill();
+   fCustomPattern = 0;
 
-   SetGtk4Color(att.GetFillColor());
-   return kTRUE;
-
-/*
    Int_t style = att.GetFillStyle() / 1000;
 
-   if (style == 1)
-      return QBrush(GetQColor(att.GetFillColor()));
-
-   if (style == 3) {
-      Int_t fasi  = att.GetFillStyle() % 1000;
-      Int_t stn = (fasi >= 1 && fasi <=25) ? fasi : 2;
-      QBitmap bitmap = QBitmap::fromData(QSize(16, 16), (uchar *)gStipples[stn]);
-      QImage image = bitmap.toImage();
-      image.setColor(0, qRgba(0, 0, 0, 0)); // transparent
-      image.setColor(1, GetQColor(att.GetFillColor()).rgba());
-      return QBrush(QPixmap::fromImage(image.copy()));
+   if (style == 1) {
+      SetGtk4Color(att.GetFillColor());
+      return kTRUE;
    }
 
-   return QBrush(Qt::NoBrush);
-*/
+   if (style != 3)
+      return kFALSE;
+
+   Int_t fasi  = att.GetFillStyle() % 1000;
+   fCustomPattern = (fasi >= 1 && fasi <=25) ? fasi : 2;
+
+   ctx->save();
+
+   return kTRUE;
 }
 
+void TGtk4PadPainter::ApplyFillBrush()
+{
+   auto ctx = fDrawArea->GetContext();
 
+   if (fCustomPattern > 0) {
+
+      unsigned char *bitmask_bytes = (unsigned char *) gStipples[fCustomPattern];
+
+      const int width = 16, height = 16;
+      auto format = Cairo::Surface::Format::A1;
+      auto stride = Cairo::ImageSurface::format_stride_for_width(format, width);
+
+      std::vector<unsigned char> padded_bytes(stride * height, 0);
+      for (int row = 0; row < height; ++row) {
+         padded_bytes[row * stride] = bitmask_bytes[row * 2];
+         padded_bytes[row * stride + 1] = bitmask_bytes[row * 2 + 1];
+      }
+
+      auto mask_surface = Cairo::ImageSurface::create(padded_bytes.data(), format, width, height, stride);
+
+      auto pattern = Cairo::SurfacePattern::create(mask_surface);
+      pattern->set_extend(Cairo::Pattern::Extend::REPEAT);
+
+      ctx->clip();
+
+      SetGtk4Color(GetAttFill().GetFillColor());
+
+      ctx->mask(pattern);
+
+      ctx->restore();
+
+      fCustomPattern = 0;
+   } else {
+
+      ctx->fill();
+   }
+
+}
 
 
 
@@ -239,14 +272,16 @@ void TGtk4PadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2
    if (!ctx)
       return;
 
-   ctx->rectangle(TMath::Min(px1, px2), TMath::Min(py1, py2), TMath::Abs(px2 - px1), TMath::Abs(py2 - py1));
-
    if (mode == TVirtualPadPainter::kHollow) {
-      if (SetLinePen())
+      if (SetLinePen()) {
+         ctx->rectangle(TMath::Min(px1, px2), TMath::Min(py1, py2), TMath::Abs(px2 - px1), TMath::Abs(py2 - py1));
          ctx->stroke();
+      }
    } else {
-      if (SetFillBrush())
-         ctx->fill();
+      if (SetFillBrush()) {
+         ctx->rectangle(TMath::Min(px1, px2), TMath::Min(py1, py2), TMath::Abs(px2 - px1), TMath::Abs(py2 - py1));
+         ApplyFillBrush();
+      }
    }
 }
 
@@ -271,7 +306,7 @@ void TGtk4PadPainter::DrawFillArea(Int_t nPoints, const Double_t *xs, const Doub
 
    ctx->close_path();
 
-   ctx->fill();
+   ApplyFillBrush();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -295,7 +330,7 @@ void TGtk4PadPainter::DrawFillArea(Int_t nPoints, const Float_t *xs, const Float
 
    ctx->close_path();
 
-   ctx->fill();
+   ApplyFillBrush();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

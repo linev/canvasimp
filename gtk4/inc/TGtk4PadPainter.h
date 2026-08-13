@@ -13,6 +13,7 @@
 
 #include "TPadPainterBase.h"
 
+
 class Gtk4DrawArea;
 
 namespace ROOT {
@@ -28,9 +29,12 @@ protected:
 
    Gtk4DrawArea *fDrawArea = nullptr;
 
+   int fCustomPattern = 0;
+
    void SetGtk4Color(Color_t id);
    Bool_t SetLinePen();
    Bool_t SetFillBrush();
+   void ApplyFillBrush();
    Bool_t SelectFont(Font_t id, Float_t size);
 
 
