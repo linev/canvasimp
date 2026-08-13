@@ -39,6 +39,9 @@ public:
 
   Gtk4DrawArea *GetDrawArea() const { return fDrawArea; }
 
+protected:
+   void size_allocate_vfunc (int width, int height, int baseline) override;
+
 private:
   //Signal handlers:
   //void on_action_file_new();
@@ -46,11 +49,13 @@ private:
   void on_action_others();
   void on_action_toggle();
 
+
   //Child widgets:
   Gtk::Box m_Box;
 
 
-  Gtk4DrawArea *fDrawArea;
+  Gtk4DrawArea *fDrawArea = nullptr;
+  Gtk::Statusbar *fStatusBar = nullptr;
 
   Glib::RefPtr<Gtk::Builder> m_refBuilder;
   Glib::RefPtr<Gio::SimpleActionGroup> m_refActionGroup;

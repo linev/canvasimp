@@ -243,6 +243,8 @@ void TGtk4PadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2
    const Int_t py2 = gPad->YtoAbsPixel(y2);
 
    auto ctx = fDrawArea->GetContext();
+   if (!ctx)
+      return;
 
    ctx->rectangle(TMath::Min(px1, px2), TMath::Min(py1, py2), TMath::Abs(px2 - px1), TMath::Abs(py2 - py1));
 

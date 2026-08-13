@@ -205,6 +205,7 @@ void TGtk4Canvas::GetCanvasGeometry(Int_t wid, UInt_t &w, UInt_t &h)
       w = 780;
       h = 580;
    }
+   printf("CanvasGeometry %u %u\n", w, h);
 }
 
 
@@ -223,6 +224,8 @@ UInt_t TGtk4Canvas::GetWindowGeometry(Int_t &x, Int_t &y, UInt_t &w, UInt_t &h)
       w = 800;
       h = 600;
    }
+
+   printf("WindowGeometry %u %u\n", w, h);
 
    return 0;
 }
@@ -260,7 +263,22 @@ void TGtk4Canvas::ForceUpdate()
 }
 
 
-static Glib::RefPtr<Gtk::Application>  gApp;
+Glib::RefPtr<Glib::MainContext> gt4k_context;
+
+class TGtk4Timer : public TTimer {
+public:
+   TGtk4Timer(Long_t milliSec, Bool_t mode) :
+      TTimer(milliSec, mode) {}
+
+   void Timeout() override
+   {
+      // just flush all events,
+      // false - do not wait/sleep for next mouse events, just exit
+      while (gt4k_context->pending())
+         gt4k_context->iteration(false);
+   }
+
+};
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -269,8 +287,15 @@ static Glib::RefPtr<Gtk::Application>  gApp;
 
 TCanvasImp *TGtk4Canvas::NewCanvas(TCanvas *c, const char *name, Int_t x, Int_t y, UInt_t width, UInt_t height)
 {
-   if (!gApp && !Gio::Application::get_default())
-      gApp = Gtk::Application::create("root.gtk4.canvasimp");
+   static TGtk4Timer *timer = nullptr;
+   if (!timer) {
+      gtk_init();
+
+      gt4k_context = Glib::MainContext::get_default();
+
+      timer = new TGtk4Timer(5, kTRUE);
+      timer->TurnOn();
+   }
 
    auto widget = new Gtk4CanvasWindow(width, height);
 
@@ -279,18 +304,36 @@ TCanvasImp *TGtk4Canvas::NewCanvas(TCanvas *c, const char *name, Int_t x, Int_t 
    //   widget->resize(width, height);
    //else
    //   widget->setGeometry(x, y, width, height);
+
+   auto draw_area = widget->GetDrawArea();
+
+   draw_area->queue_draw();
+
    widget->present();
+
+
+   // workaround to let gtk4 time for first rendering of the widget
+   int cnt = 100;
+   while (cnt-- > 0 && (draw_area->get_width() == 0)) {
+      while (gt4k_context->pending())
+         gt4k_context->iteration(false);
+   }
+
+   printf("  ---- now here ----\n");
+
 
    auto imp = new TGtk4Canvas(c, name, x, y, width, height);
 
    imp->fCanvasWindow = widget;
-   imp->fDrawArea = widget->GetDrawArea();
+   imp->fDrawArea = draw_area;
 
-   if (imp->fDrawArea)
-      imp->fDrawArea->SetCanvas(c);
+   // now can set canvas
+   draw_area->SetCanvas(c);
+   draw_area->queue_draw(); // request to update painting
 
    // set all internal dimensions
-   c->Resize();
+   // c->Resize();
+
 
    // TODO: maybe apply same logic to adjust canvas dimension as in TRootCanvas
    //       Keep commented code here intentionally to be able find this place when

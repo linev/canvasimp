@@ -20,23 +20,36 @@ Gtk4DrawArea::Gtk4DrawArea()
 {
     // Bind the member function as the draw function
     set_draw_func(sigc::mem_fun(*this, &Gtk4DrawArea::on_draw));
+
+    set_expand(true);
 }
 
 void Gtk4DrawArea::on_draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height)
 {
-    fContext = cr.get();
+    if (!fCanvas) {
+       cr->set_source_rgb(0.15, 0.15, 0.15);
+       cr->paint();
 
-    // 1. Paint background dark gray
-    cr->set_source_rgb(0.15, 0.15, 0.15);
+       // 2. Draw a blue circle in the center that scales with the window
+       double radius = std::min(width, height) / 4.0;
+       cr->set_source_rgb(0.2, 0.5, 0.8);
+       cr->arc(width / 2.0, height / 2.0, radius, 0.0, 2.0 * M_PI);
+       cr->fill();
+       return;
+    }
+
+    if ((width != fCanvas->GetPadWidth()) || (height != fCanvas->GetPadHeight()))
+       fCanvas->Resize();
+
+
+    // clear
+    cr->set_source_rgb(1., 1., 1.);
     cr->paint();
 
-    // 2. Draw a blue circle in the center that scales with the window
-    double radius = std::min(width, height) / 4.0;
-    cr->set_source_rgb(0.2, 0.5, 0.8);
-    cr->arc(width / 2.0, height / 2.0, radius, 0.0, 2.0 * M_PI);
-    cr->fill();
+    fContext = cr.get();
 
     // TODO: call canvas->paint instead
+    fCanvas->Paint();
 
     fContext = nullptr;
 }

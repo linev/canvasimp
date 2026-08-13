@@ -45,3 +45,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::GTKMM)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    "${CMAKE_CURRENT_SOURCE_DIR}/rootlogon.C"
+    "${CMAKE_CURRENT_BINARY_DIR}/rootlogon.C"
+    COMMENT "Copying rootlogon.C to build directory..."
+)
+

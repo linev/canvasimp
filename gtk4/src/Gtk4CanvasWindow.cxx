@@ -155,15 +155,23 @@ Gtk4CanvasWindow::Gtk4CanvasWindow(unsigned width, unsigned height)
 
 
 
-  auto p_statusbar = Gtk::make_managed<Gtk::Statusbar>();
-  unsigned int context_id = p_statusbar->get_context_id("main_status");
-  p_statusbar->push("Ready to draw", context_id);
-  m_Box.append(*p_statusbar);
+  fStatusBar = Gtk::make_managed<Gtk::Statusbar>();
+  unsigned int context_id = fStatusBar->get_context_id("main_status");
+  fStatusBar->push("Ready to draw", context_id);
+  m_Box.append(*fStatusBar);
 }
 
 Gtk4CanvasWindow::~Gtk4CanvasWindow()
 {
 }
+
+void Gtk4CanvasWindow::size_allocate_vfunc(int width, int height, int baseline)
+{
+   std::cout << "Widget was drawn/allocated at: " << width << " x " << height << " px" << std::endl;
+   std::cout << "Widget report : " << get_width() << " x " << get_height() << " px" << std::endl;
+}
+
+
 
 void Gtk4CanvasWindow::on_action_file_quit()
 {
