@@ -20,6 +20,12 @@
 #include "TColor.h"
 #include "RStipples.h"
 
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_GLYPH_H
+#include "TTF.h"
+
 #include <memory>
 #include <map>
 
@@ -32,7 +38,7 @@
 using namespace ROOT::Experimental;
 
 // to scale fonts to the same size as in the TTF
-const Float_t kScale = 0.75 * 0.93376068;
+const Float_t kScale = 0.93376068;
 
 /** \class TGtk4PadPainter
     \ingroup gtk4canvas
@@ -149,7 +155,7 @@ Bool_t TGtk4PadPainter::SetLinePen()
 
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Asign brush attributes to fill line
+/// Asign fill attributes before drawin shape
 
 Bool_t TGtk4PadPainter::SetFillBrush()
 {
@@ -170,13 +176,16 @@ Bool_t TGtk4PadPainter::SetFillBrush()
    if (style != 3)
       return kFALSE;
 
-   Int_t fasi  = att.GetFillStyle() % 1000;
+   Int_t fasi = att.GetFillStyle() % 1000;
    fCustomPattern = (fasi >= 1 && fasi <=25) ? fasi : 2;
 
    ctx->save();
-
+   SetGtk4Color(att.GetFillColor());
    return kTRUE;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+/// Complete fill operation - which may include custom pattern handling
 
 void TGtk4PadPainter::ApplyFillBrush()
 {
@@ -202,8 +211,6 @@ void TGtk4PadPainter::ApplyFillBrush()
       pattern->set_extend(Cairo::Pattern::Extend::REPEAT);
 
       ctx->clip();
-
-      SetGtk4Color(GetAttFill().GetFillColor());
 
       ctx->mask(pattern);
 
@@ -570,96 +577,23 @@ void TGtk4PadPainter::SaveImage(TVirtualPad * /* pad */, const char * /* fileNam
 {
 }
 
-
-////////////////////////////////////////////////////////////////////////////////
-/// Return font family for specified ROOT font id
-/// If necessary, register TTF font to Qt first
-
-/*
-QString TGtk4PadPainter::GetFontFamily(Font_t fontnumber)
-{
-   // TODO: make special generic method, used from several places
-   static const char *fonttable[][2] = {
-     { "Root.TTFont.0", "FreeSansBold.otf" },
-     { "Root.TTFont.1", "FreeSerifItalic.otf" },
-     { "Root.TTFont.2", "FreeSerifBold.otf" },
-     { "Root.TTFont.3", "FreeSerifBoldItalic.otf" },
-     { "Root.TTFont.4", "texgyreheros-regular.otf" },
-     { "Root.TTFont.5", "texgyreheros-italic.otf" },
-     { "Root.TTFont.6", "texgyreheros-bold.otf" },
-     { "Root.TTFont.7", "texgyreheros-bolditalic.otf" },
-     { "Root.TTFont.8", "FreeMono.otf" },
-     { "Root.TTFont.9", "FreeMonoOblique.otf" },
-     { "Root.TTFont.10", "FreeMonoBold.otf" },
-     { "Root.TTFont.11", "FreeMonoBoldOblique.otf" },
-     { "Root.TTFont.12", "symbol.ttf" },
-     { "Root.TTFont.13", "FreeSerif.otf" },
-     { "Root.TTFont.14", "wingding.ttf" },
-     { "Root.TTFont.15", "symbol.ttf" },
-     { "Root.TTFont.STIXGen", "STIXGeneral.otf" },
-     { "Root.TTFont.STIXGenIt", "STIXGeneralItalic.otf" },
-     { "Root.TTFont.STIXGenBd", "STIXGeneralBol.otf" },
-     { "Root.TTFont.STIXGenBdIt", "STIXGeneralBolIta.otf" },
-     { "Root.TTFont.STIXSiz1Sym", "STIXSiz1Sym.otf" },
-     { "Root.TTFont.STIXSiz1SymBd", "STIXSiz1SymBol.otf" },
-     { "Root.TTFont.STIXSiz2Sym", "STIXSiz2Sym.otf" },
-     { "Root.TTFont.STIXSiz2SymBd", "STIXSiz2SymBol.otf" },
-     { "Root.TTFont.STIXSiz3Sym", "STIXSiz3Sym.otf" },
-     { "Root.TTFont.STIXSiz3SymBd", "STIXSiz3SymBol.otf" },
-     { "Root.TTFont.STIXSiz4Sym", "STIXSiz4Sym.otf" },
-     { "Root.TTFont.STIXSiz4SymBd", "STIXSiz4SymBol.otf" },
-     { "Root.TTFont.STIXSiz5Sym", "STIXSiz5Sym.otf" },
-     { "Root.TTFont.ME", "DroidSansFallback.ttf" },
-     { "Root.TTFont.CJKMing", "DroidSansFallback.ttf" },
-     { "Root.TTFont.CJKGothic", "DroidSansFallback.ttf" }
-   };
-
-   int fontid = fontnumber / 10;
-   if (fontid < 0 || fontid > 31)
-      fontid = 0;
-
-   static std::map<int, QString> registeredFonts;
-
-   auto iter = registeredFonts.find(fontid);
-   if (iter != registeredFonts.end())
-      return iter->second;
-
-   const char *ttpath = gEnv->GetValue("Root.TTFontPath",
-                                        TROOT::GetTTFFontDir());
-
-   TString fname = gEnv->GetValue(fonttable[fontid][0], fonttable[fontid][1]);
-
-   const char *ttfont = gSystem->FindFile(ttpath, fname, kReadPermission);
-
-   if (!ttfont) {
-      ::Error("TGtk4PadPainter::GetFontFamily", "Not found font %s in configured path %s", fname.Data(), ttpath);
-      return "";
-   }
-
-   int qtId = QFontDatabase::addApplicationFont(ttfont);
-   if (qtId == -1) {
-      ::Error("TGtk4PadPainter::GetFontFamily", "No able to add font %s to QFontDataBase", ttfont);
-      return "";
-   }
-
-   QString fontFamily = QFontDatabase::applicationFontFamilies(qtId).at(0);
-
-   registeredFonts[fontid] = fontFamily;
-
-   return fontFamily;
-}
-
-*/
-
 Bool_t TGtk4PadPainter::SelectFont(Font_t id, Float_t size)
 {
    auto ctx = fDrawArea->GetContext();
    if (!ctx)
       return kFALSE;
 
-   ctx->select_font_face("Arial", Cairo::ToyFontFace::Slant::NORMAL, Cairo::ToyFontFace::Weight::NORMAL);
+   // same calculation done in the TTF
+   Int_t pixelsize = (Int_t)(size*kScale + 0.5);
 
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
+   TTFhandle handle;
+   handle.SetTextFont(id);
+   handle.SetTextSize(size);
+
+   // workaround to keep handle until next font selection
+   static auto cairo_font = Cairo::FtFontFace::create(handle.GetFontFace(), 0);
+
+   ctx->set_font_face(cairo_font);
 
    ctx->set_font_size(pixelsize);
 
@@ -685,20 +619,30 @@ void TGtk4PadPainter::PaintGtk4String(int x, int y, const char *s)
    Cairo::TextExtents extents;
    ctx->get_text_extents(s, extents);
 
+   Cairo::FontExtents font_metrics;
+   ctx->get_font_extents(font_metrics);
+
+
    Int_t txalh = att.GetTextAlign() / 10;
    Int_t txalv = att.GetTextAlign() % 10;
+
+   // to make alignment same way as in TGX11TTF
+   // width includes width and bearing
+   // height only includes font accent
+   Int_t t_width = extents.width + extents.x_bearing;
+   Int_t t_height = font_metrics.ascent;
 
    switch (txalh) {
       case 0:
       case 1: break; //left
-      case 2: x -= extents.width / 2 + extents.x_bearing; break; //center
-      case 3: x -= extents.width + extents.x_bearing; break; //right
+      case 2: x -= t_width / 2; break; //center
+      case 3: x -= t_width; break; //right
    }
 
    switch (txalv) {
       case 1: break; //bottom
-      case 2: y -= extents.height / 2 + extents.y_bearing; break; // middle
-      case 3: y -= extents.height + extents.y_bearing; break; //top
+      case 2: y -= t_height / 2; break; // middle
+      case 3: y -= t_height; break; //top
    }
 
    ctx->move_to(x, y);
@@ -757,8 +701,8 @@ void TGtk4PadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a
 
    ctx->get_font_extents(font_metrics);
 
-   a = font_metrics.ascent;
-   d = font_metrics.descent;
+   a = TMath::Abs(font_metrics.ascent);
+   d = TMath::Abs(font_metrics.descent);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -777,8 +721,8 @@ void TGtk4PadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a
 
    ctx->get_font_extents(font_metrics);
 
-   a = font_metrics.ascent;
-   d = font_metrics.descent;
+   a = TMath::Abs(font_metrics.ascent);
+   d = TMath::Abs(font_metrics.descent);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
