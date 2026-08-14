@@ -13,6 +13,7 @@
 #define ROOT_Gtk4MethodDialog
 
 #include <gtkmm.h>
+#include <vector>
 
 class TContextMenu;
 class TObject;
@@ -23,8 +24,6 @@ class Gtk4MethodDialog: public Gtk::Window {
    public:
       Gtk4MethodDialog(unsigned width = 400, unsigned height = 200);
 
-      //void addArg(const char *argname, const char *value, const char *type);
-
       //QString getArg(int n);
 
       void methodDialog(TContextMenu *menu, TObject *object, TFunction* func);
@@ -34,14 +33,23 @@ class Gtk4MethodDialog: public Gtk::Window {
    protected:
 
       void on_color_changed();
+      void on_ok_button_clicked();
+      void on_cancel_button_clicked();
 
       void addColorInput(Gtk::Box *box);
+
+      void addArg(const char *argname, const char *value, const char *type);
+
+      void addOkCancelButtons();
 
       Gtk::Box *m_main_box = nullptr;
 
       Gtk::ColorDialogButton* m_color_button = nullptr;
 
-      // QVector<QLineEdit*> fArgs;
+      std::vector<Gtk::Entry *> fArgs;
+      TContextMenu *fMenu = nullptr;
+      TObject *fObject = nullptr;
+      TFunction *fFunc = nullptr;
 };
 
 #endif

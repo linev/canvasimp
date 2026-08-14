@@ -84,7 +84,6 @@ void Gtk4MethodDialog::addColorInput(Gtk::Box *box)
    layout_grid->attach(*m_color_button, 3, 0, 7, 1);
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 /// on color change
 
@@ -98,44 +97,87 @@ void Gtk4MethodDialog::on_color_changed()
             << ", Blue: " << selected_color.get_blue() << std::endl;
 }
 
-/*
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Add argument
+/// Add method argument
 
 void Gtk4MethodDialog::addArg(const char *argname, const char *value, const char *)
 {
-   QLabel* lbl = new QLabel(argname);
-   argLayout->addWidget(lbl);
+   auto layout_grid = Gtk::make_managed<Gtk::Grid>();
+   layout_grid->set_column_spacing(15);
+   layout_grid->set_hexpand(true);
+   layout_grid->set_halign(Gtk::Align::FILL);
+   m_main_box->append(*layout_grid);
 
-   QLineEdit* le = new QLineEdit();
-   le->setGeometry(10,10, 130, 30);
-   le->setFocus();
-   le->setText(value);
-   argLayout->addWidget(le);
+   auto label = Gtk::make_managed<Gtk::Label>(TString::Format("%s:", argname).Data());
+   label->set_halign(Gtk::Align::START);
+   label->set_hexpand(true);              // Wants to expand
+   label->set_halign(Gtk::Align::FILL);   // Stretch to fill its 50% allocation
+   label->set_xalign(0.0);
 
-   fArgs.push_back(le);
+   auto entry = Gtk::make_managed<Gtk::Entry>();
+   // Optional configuration properties
+   entry->set_text(value);
+   // entry->set_placeholder_text("enter value");
+   // entry->set_max_length(50); // Restrict length if needed
+   entry->set_hexpand(true);             // Wants to expand equally with the label
+   entry->set_halign(Gtk::Align::FILL);
+   // entry->signal_activate().connect(sigc::mem_fun(*this, &Gtk4MethodDialog::on_entry_submitted));
+
+   // Attach items to the Grid
+   // grid->attach(widget, column, row, column_span, row_span)
+   // We let the label take 3 columns (30%) and the button take 7 columns (70%)
+   layout_grid->attach(*label,   0, 0, 3, 1);
+   layout_grid->attach(*entry, 3, 0, 7, 1);
+
+   fArgs.push_back(entry);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Get argument value
+/// Add Ok and Cancel buttons
 
-QString Gtk4MethodDialog::getArg(int n)
+void Gtk4MethodDialog::addOkCancelButtons()
 {
-   if ((n<0) || (n>=fArgs.size())) return QString("");
-   return fArgs[n]->text();
+   auto hbox = Gtk::make_managed<Gtk::Box>();
+   hbox->set_hexpand(true);
+   hbox->set_halign(Gtk::Align::END);
+   m_main_box->append(*hbox);
+
+   auto button1 = Gtk::make_managed<Gtk::Button>("Ok");
+   button1->signal_clicked().connect(sigc::mem_fun(*this, &Gtk4MethodDialog::on_ok_button_clicked));
+
+   auto button2 = Gtk::make_managed<Gtk::Button>("Cancel");
+   button2->signal_clicked().connect([this]() { close(); });
+
+   hbox->append(*button1);
+   hbox->append(*button2);
 }
 
+void Gtk4MethodDialog::on_ok_button_clicked()
+{
+   TObjArray argslist(fArgs.size());
 
-////////////////////////////////////////////////////////////////////////////////
-/// Run method dialog
+   for (auto entry : fArgs) {
+      Glib::ustring v = entry->get_text();
+      argslist.AddLast(new TObjString(v.c_str()));
+   }
+
+   close();
+
+   if (fMenu && fObject)
+      fMenu->Execute(fObject, fFunc, &argslist);
+
+   fMenu = nullptr;
+   fObject = nullptr;
+   fFunc = nullptr;
+}
 
 void Gtk4MethodDialog::methodDialog(TContextMenu *menu, TObject *object, TFunction* func)
 {
    if (!menu || !object || !func)
       return;
 
-   setWindowTitle(menu->CreateDialogTitle(object, func));
+   set_title(menu->CreateDialogTitle(object, func));
 
    // iterate through all arguments and create appropriate input-data objects:
    // inputlines, option menus...
@@ -218,27 +260,11 @@ void Gtk4MethodDialog::methodDialog(TContextMenu *menu, TObject *object, TFuncti
       }
    }
 
-   if (exec() != QDialog::Accepted)
-      return;
-
-   TObjArray tobjlist(func->GetListOfMethodArgs()->LastIndex() + 1);
-   for (int n = 0; n <= func->GetListOfMethodArgs()->LastIndex(); n++) {
-      QString s = getArg(n);
-      tobjlist.AddLast(new TObjString(s.toLatin1().constData()));
-   }
-
-   menu->Execute(object, func, &tobjlist);
-}
-
-*/
-
-
-void Gtk4MethodDialog::methodDialog(TContextMenu *menu, TObject *object, TFunction* func)
-{
-   if (!menu || !object || !func)
-      return;
-
-   addColorInput(m_main_box);
+   addOkCancelButtons();
 
    present();
+
+   fMenu = menu;
+   fObject = object;
+   fFunc = func;
 }
