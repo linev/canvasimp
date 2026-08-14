@@ -15,6 +15,7 @@ pkg_check_modules(GTKMM REQUIRED IMPORTED_TARGET gtkmm-4.0)
 set(SOURCES
     src/Gtk4DrawArea.cxx
     src/Gtk4CanvasWindow.cxx
+    src/Gtk4MethodDialog.cxx
     src/TGtk4ContextMenu.cxx
     src/TGtk4Canvas.cxx
     src/TGtk4GuiFactory.cxx

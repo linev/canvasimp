@@ -33,6 +33,7 @@ are destroyed when the menu pops downs.
 
 #include "TGtk4Canvas.h"
 #include "Gtk4DrawArea.h"
+#include "Gtk4MethodDialog.h"
 
 #include <iostream>
 
@@ -298,8 +299,9 @@ void TGtk4ContextMenu::Dialog(TObject *object, TMethod *method)
 
 void TGtk4ContextMenu::Dialog(TObject * object, TFunction * func)
 {
-   //QRootMethodDialog dlg;
-   //dlg.methodDialog(fContextMenu, object, func);
+   auto widget = new Gtk4MethodDialog(300, 300);
+
+   widget->methodDialog(fContextMenu, object, func);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
