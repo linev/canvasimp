@@ -60,31 +60,32 @@ void TGtk4PadPainter::SetOpacity(Int_t percent)
 
 void TGtk4PadPainter::SetCursor(Int_t, ECursor cursor)
 {
-   /*
+
+   const char *id = nullptr;
    switch(cursor) {
-      case kBottomLeft: fDrawArea->setCursor(Qt::SizeBDiagCursor); break;
-      case kBottomRight: fDrawArea->setCursor(Qt::SizeFDiagCursor); break;
-      case kTopLeft: fDrawArea->setCursor(Qt::SizeFDiagCursor); break;
-      case kTopRight: fDrawArea->setCursor(Qt::SizeBDiagCursor); break;
-      case kBottomSide: fDrawArea->setCursor(Qt::SizeVerCursor); break;
-      case kLeftSide: fDrawArea->setCursor(Qt::SizeHorCursor); break;
-      case kTopSide: fDrawArea->setCursor(Qt::SizeVerCursor); break;
-      case kRightSide: fDrawArea->setCursor(Qt::SizeHorCursor); break;
-      case kMove: fDrawArea->setCursor(Qt::DragMoveCursor); break;
-      case kCross: fDrawArea->setCursor(Qt::CrossCursor); break;
-      case kArrowHor: fDrawArea->setCursor(Qt::SizeHorCursor); break;
-      case kArrowVer: fDrawArea->setCursor(Qt::UpArrowCursor); break;
-      case kHand: fDrawArea->setCursor(Qt::OpenHandCursor); break;
-      case kRotate: fDrawArea->setCursor(Qt::ClosedHandCursor); break;
-      case kPointer: fDrawArea->setCursor(Qt::ArrowCursor); break;
-      case kArrowRight: fDrawArea->setCursor(Qt::SizeHorCursor); break;
-      case kCaret: fDrawArea->setCursor(Qt::WaitCursor); break;
-      case kWatch: fDrawArea->setCursor(Qt::WaitCursor); break;
-      case kNoDrop: fDrawArea->setCursor(Qt::ForbiddenCursor); break;
-      default:
-         fDrawArea->unsetCursor();
+      case kBottomLeft: id = "sw-resize"; break;
+      case kBottomRight: id = "se-resize"; break;
+      case kTopLeft: id = "nw-resize"; break;
+      case kTopRight: id = "ne-resize"; break;
+      case kBottomSide: id = "s-resize"; break;
+      case kLeftSide: id = "w-resize"; break;
+      case kTopSide: id = "n-resize"; break;
+      case kRightSide: id = "r-resize"; break;
+      case kMove: id = "move"; break;
+      case kCross: id = "crosshair"; break;
+      case kArrowHor: id = "ns-resize"; break;
+      case kArrowVer: id = "ew-resize"; break;
+      case kHand: id = "grab"; break;
+      case kRotate: id = "grab"; break;
+      case kPointer: id = "pointer"; break;
+      case kArrowRight: id = "ew-resize"; break;
+      case kCaret: id = "text"; break;
+      case kWatch: id = "wait"; break;
+      case kNoDrop: id = "no-drop"; break;
+      default: id = "default"; break;
    }
-   */
+   if (id)
+      fDrawArea->set_cursor(id);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
