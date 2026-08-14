@@ -32,6 +32,7 @@
 #include "Gtk4DrawArea.h"
 
 #include <cairomm/context.h>
+#include <cairo.h>
 
 
 
@@ -601,12 +602,112 @@ Bool_t TGtk4PadPainter::SelectFont(Font_t id, Float_t size)
    return kTRUE;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+/// Paint text using TTF functionality
+
+void TGtk4PadPainter::PaintGtk4StringTTF(int x, int y, const char *s)
+{
+   const TAttText &att = GetAttText();
+
+   auto textsize = att.GetTextSizePixels(*gPad);
+
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(textsize);
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(s);
+
+   ttf.LayoutGlyphs();
+
+
+   Int_t txalh = att.GetTextAlign() / 10;
+   Int_t txalv = att.GetTextAlign() % 10;
+
+   FT_Vector alignVector;
+   alignVector.x = 0; alignVector.y = 0;
+
+   switch (txalh) {
+      case 0:
+      case 1: break; //left
+      case 2: alignVector.x = ttf.GetWidth() / 2; break; //center
+      case 3: alignVector.x = ttf.GetWidth(); break; //right
+   }
+
+   switch (txalv) {
+      case 1: break; //bottom
+      case 2: alignVector.y = ttf.GetAscent() / 2; break; // middle
+      case 3: alignVector.y = ttf.GetAscent(); break; //top
+   }
+
+   FT_Vector_Transform(&alignVector, ttf.GetRotMatrix());
+   alignVector.x = alignVector.x >> 6;
+   alignVector.y = alignVector.y >> 6;
+
+   Int_t Xoff = TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
+   Int_t Yoff = TMath::Max(0, (Int_t) -ttf.GetBox().yMin);
+   Int_t w    = ttf.GetBox().xMax + Xoff;
+   Int_t h    = ttf.GetBox().yMax + Yoff;
+   Int_t x1   = x - Xoff - alignVector.x;
+   Int_t y1   = y + Yoff + alignVector.y - h;
+
+   int width = fDrawArea->get_width();
+   int height = fDrawArea->get_height();
+
+   printf("Paint text with TTF %s\n", s);
+
+   // If w or h is 0, very likely the string is only blank characters
+   if (w <= 0 || h <= 0)
+      return;
+
+   // If string falls outside window, there is probably no need to draw it.
+   if (x1 + w <= 0 || x1 >= width || y1 + h <= 0 || y1 >= height)
+      return;
+
+   auto ctx = fDrawArea->GetContext();
+
+   SetGtk4Color(att.GetTextColor());
+
+   for (UInt_t n = 0; n < ttf.GetNumGlyphs(); n++) {
+      if (auto glyph = ttf.GetGlyphBitmap(n)) {
+         FT_Bitmap &bmp = glyph->bitmap;
+
+         if (bmp.width == 0 || bmp.rows == 0)
+            continue; // e.g. space
+
+         Int_t bx = glyph->left + Xoff;
+         Int_t by = h - glyph->top - Yoff;
+
+         // Cairo's A8 surfaces need their own row stride (padding), which
+         // usually differs from FreeType's bmp.pitch - copy row by row
+         int stride = Cairo::ImageSurface::format_stride_for_width(Cairo::Surface::Format::A8, bmp.width);
+         std::vector<unsigned char> data(stride * bmp.rows, 0);
+
+         for (unsigned int row = 0; row < bmp.rows; ++row)
+            std::memcpy(data.data() + row * stride, bmp.buffer + row * bmp.pitch, bmp.width);
+
+         auto surface =
+            Cairo::ImageSurface::create(data.data(), Cairo::Surface::Format::A8, bmp.width, bmp.rows, stride);
+
+         // bitmap_left/top position the glyph relative to the baseline origin
+         // double glyphX = x + slot->bitmap_left;
+         // double glyphY = y - slot->bitmap_top;
+
+         ctx->mask(surface, x1 + bx, y1 + by); // A8 surface used as an alpha mask
+      }
+   }
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Actual text painting image
 
 void TGtk4PadPainter::PaintGtk4String(int x, int y, const char *s)
 {
+   PaintGtk4StringTTF(x, y, s);
+   return;
+
    const TAttText &att = GetAttText();
 
    auto textsize = att.GetTextSizePixels(*gPad);

@@ -37,9 +37,9 @@ protected:
    void ApplyFillBrush();
    Bool_t SelectFont(Font_t id, Float_t size);
 
-
-
    void PaintGtk4String(int x, int y, const char *s);
+
+   void PaintGtk4StringTTF(int x, int y, const char *s);
 
 public:
 
