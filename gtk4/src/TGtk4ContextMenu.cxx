@@ -112,23 +112,39 @@ void TGtk4ContextMenu::DisplayPopup(Int_t x, Int_t y)
       current_section = Gio::Menu::create();
    };
 
-   auto addMenuAction = [&current_section, this](const TString &text, int id, void *arg = nullptr, int checked = 0) {
+   auto addMenuAction = [&current_section, &action_group, this](const TString &text, int id, void *arg = nullptr, int checked = 0) {
       bool enabled = true;
       if ((text == "DrawClone") || (text == "DrawClass") || (text == "Inspect") ||
           (text == "SetShowProjectionX") || (text == "SetShowProjectionY") ||
           (text == "DrawPanel") || (text == "FitPanel"))
          enabled = false;
 
-      if ((checked == 1) || (checked == -1)) {
-         printf("NEED To implement checked action\n");
-      }
 
-      if (enabled) {
+      if (checked != 0) {
+         TString action_name = TString::Format("toggle-item-%d", id);
+         auto action = Gio::SimpleAction::create_bool(action_name.Data(), checked > 0);
+         action->signal_activate().connect([action,this, id](const Glib::VariantBase & parameter) {
+            bool current;
+            action->get_state(current);
+            action->set_state(Glib::Variant<bool>::create(!current));
+            std::cout << "Action triggered with integer value: " << id << std::endl;
+            executeMenu(id);
+         });
+         action->set_enabled(enabled);
+         action_group->add_action(action);
+
+         action_name.Prepend("context.");
+         auto item = Gio::MenuItem::create(text.Data(), action_name.Data());
+         current_section->append_item(item);
+      } else if (enabled) {
          auto item = Gio::MenuItem::create(text.Data(), "");
          item->set_action_and_target("context.action", Glib::Variant<int>::create(id));
          current_section->append_item(item);
-      } else
+      } else {
+         // just refer to non-existing action
          current_section->append(text.Data(), "context.dummy");
+      }
+
       fCustomArg[id] = arg;
    };
 
