@@ -828,13 +828,29 @@ void TGtk4ContextMenu::executeMenu(int id)
       auto m = (TMethod *) ud;
 
       if (!strcmp(m->GetName(), "SetLineAttributes")) {
-         // SetLineAttributesDialog();
+         auto attline = dynamic_cast<TAttLine *>(fContextMenu->GetSelectedObject());
+         if (attline) {
+            auto widget = new Gtk4MethodDialog(300, 300);
+            widget->attLineDialog(attline);
+         }
       } else if (!strcmp(m->GetName(), "SetFillAttributes")) {
-         // SetFillAttributesDialog();
+         auto attfill = dynamic_cast<TAttFill *>(fContextMenu->GetSelectedObject());
+         if (attfill) {
+            auto widget = new Gtk4MethodDialog(300, 300);
+            widget->attFillDialog(attfill);
+         }
       } else if (!strcmp(m->GetName(), "SetTextAttributes")) {
-         // SetTextAttributesDialog();
+         auto atttext = dynamic_cast<TAttText *>(fContextMenu->GetSelectedObject());
+         if (atttext) {
+            auto widget = new Gtk4MethodDialog(300, 300);
+            widget->attTextDialog(atttext);
+         }
       } else if (!strcmp(m->GetName(), "SetMarkerAttributes")) {
-         // SetMarkerAttributesDialog();
+         auto attmark = dynamic_cast<TAttMarker *>(fContextMenu->GetSelectedObject());
+         if (attmark) {
+            auto widget = new Gtk4MethodDialog(300, 300);
+            widget->attMarkerDialog(attmark);
+         }
       } else {
          fContextMenu->Action(m);
       }

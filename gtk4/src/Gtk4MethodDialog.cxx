@@ -18,6 +18,13 @@
 #include "TMethodCall.h"
 #include "TObjString.h"
 #include "TContextMenu.h"
+#include "TColor.h"
+
+#include "TAttLine.h"
+#include "TAttFill.h"
+#include "TAttText.h"
+#include "TAttMarker.h"
+
 
 #include <iostream>
 
@@ -42,66 +49,35 @@ Gtk4MethodDialog::Gtk4MethodDialog(unsigned width, unsigned height)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// on color change
+/// add line with color button
 
-void Gtk4MethodDialog::addColorInput(Gtk::Box *box)
+void Gtk4MethodDialog::addColorInput(Int_t colindx)
 {
+   TColor *rootColor = gROOT->GetColor(colindx);
+   Gdk::RGBA initial_color;
+   initial_color.set_rgba(0.0, 0.0, 0.0, 1.0);
+
+   if (rootColor)
+      initial_color.set_rgba(rootColor->GetRed(), rootColor->GetGreen(), rootColor->GetBlue(), rootColor->GetAlpha());
+
    auto color_dialog = Gtk::ColorDialog::create();
    color_dialog->set_title("Select a Custom Color");
    color_dialog->set_modal(true);
-
-   auto layout_grid = Gtk::make_managed<Gtk::Grid>();
-   layout_grid->set_column_spacing(15);
-   layout_grid->set_hexpand(true);
-   layout_grid->set_halign(Gtk::Align::FILL);
-   box->append(*layout_grid);
-
-   auto color_label = Gtk::make_managed<Gtk::Label>("Select Color:");
-   color_label->set_halign(Gtk::Align::START);
-   color_label->set_hexpand(true);              // Wants to expand
-   color_label->set_halign(Gtk::Align::FILL);   // Stretch to fill its 50% allocation
-   color_label->set_xalign(0.0);
 
    // Instantiate the specific ColorDialogButton using our dialog rules
    m_color_button = Gtk::make_managed<Gtk::ColorDialogButton>(color_dialog);
    m_color_button->set_halign(Gtk::Align::END);
 
    // Set an initial default color (e.g., solid Red)
-   Gdk::RGBA initial_color;
-   initial_color.set_rgba(1.0, 0.0, 0.0, 1.0);
    m_color_button->set_rgba(initial_color);
-   m_color_button->set_hexpand(true);             // Wants to expand equally with the label
-   m_color_button->set_halign(Gtk::Align::FILL);
-   // 3. Connect a property notification listener to capture user selection changes
-   m_color_button->property_rgba().signal_changed().connect(
-      sigc::mem_fun(*this, &Gtk4MethodDialog::on_color_changed)
-   );
 
-   // Attach items to the Grid
-   // grid->attach(widget, column, row, column_span, row_span)
-   // We let the label take 3 columns (30%) and the button take 7 columns (70%)
-   layout_grid->attach(*color_label,   0, 0, 3, 1);
-   layout_grid->attach(*m_color_button, 3, 0, 7, 1);
+   addLine("Color", m_color_button);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// on color change
+/// Add single dialog line
 
-void Gtk4MethodDialog::on_color_changed()
-{
-   // 4. Retrieve the chosen RGBA color payload
-   Gdk::RGBA selected_color = m_color_button->get_rgba();
-
-   std::cout << "Color updated to -> Red: " << selected_color.get_red()
-            << ", Green: " << selected_color.get_green()
-            << ", Blue: " << selected_color.get_blue() << std::endl;
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-/// Add method argument
-
-void Gtk4MethodDialog::addArg(const char *argname, const char *value, const char *)
+void Gtk4MethodDialog::addLine(const char *txt, Gtk::Widget *widget)
 {
    auto layout_grid = Gtk::make_managed<Gtk::Grid>();
    layout_grid->set_column_spacing(15);
@@ -109,29 +85,37 @@ void Gtk4MethodDialog::addArg(const char *argname, const char *value, const char
    layout_grid->set_halign(Gtk::Align::FILL);
    m_main_box->append(*layout_grid);
 
-   auto label = Gtk::make_managed<Gtk::Label>(TString::Format("%s:", argname).Data());
+   auto label = Gtk::make_managed<Gtk::Label>(txt);
    label->set_halign(Gtk::Align::START);
    label->set_hexpand(true);              // Wants to expand
    label->set_halign(Gtk::Align::FILL);   // Stretch to fill its 50% allocation
    label->set_xalign(0.0);
 
+
+   widget->set_hexpand(true);             // Wants to expand equally with the label
+   widget->set_halign(Gtk::Align::FILL);
+
+   layout_grid->attach(*label,  0, 0, 3, 1);
+   layout_grid->attach(*widget, 3, 0, 7, 1);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Add method argument
+
+void Gtk4MethodDialog::addArg(const char *argname, const char *value, const char *)
+{
    auto entry = Gtk::make_managed<Gtk::Entry>();
    // Optional configuration properties
    entry->set_text(value);
    // entry->set_placeholder_text("enter value");
    // entry->set_max_length(50); // Restrict length if needed
-   entry->set_hexpand(true);             // Wants to expand equally with the label
-   entry->set_halign(Gtk::Align::FILL);
    // entry->signal_activate().connect(sigc::mem_fun(*this, &Gtk4MethodDialog::on_entry_submitted));
 
-   // Attach items to the Grid
-   // grid->attach(widget, column, row, column_span, row_span)
-   // We let the label take 3 columns (30%) and the button take 7 columns (70%)
-   layout_grid->attach(*label,   0, 0, 3, 1);
-   layout_grid->attach(*entry, 3, 0, 7, 1);
+   addLine(TString::Format("%s:", argname).Data(), entry);
 
    fArgs.push_back(entry);
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Add Ok and Cancel buttons
@@ -153,24 +137,6 @@ void Gtk4MethodDialog::addOkCancelButtons()
    hbox->append(*button2);
 }
 
-void Gtk4MethodDialog::on_ok_button_clicked()
-{
-   TObjArray argslist(fArgs.size());
-
-   for (auto entry : fArgs) {
-      Glib::ustring v = entry->get_text();
-      argslist.AddLast(new TObjString(v.c_str()));
-   }
-
-   close();
-
-   if (fMenu && fObject)
-      fMenu->Execute(fObject, fFunc, &argslist);
-
-   fMenu = nullptr;
-   fObject = nullptr;
-   fFunc = nullptr;
-}
 
 void Gtk4MethodDialog::methodDialog(TContextMenu *menu, TObject *object, TFunction* func)
 {
@@ -267,4 +233,113 @@ void Gtk4MethodDialog::methodDialog(TContextMenu *menu, TObject *object, TFuncti
    fMenu = menu;
    fObject = object;
    fFunc = func;
+}
+
+
+void Gtk4MethodDialog::attLineDialog(TAttLine *att)
+{
+   addColorInput(att->GetLineColor());
+
+   auto style_list = Gtk::StringList::create({"None", "Style 1", "Style 2", "Style 3", "Style 4", "Style 5", "Style 6", "Style 7", "Style 8", "Style 9"});
+   m_line_style = Gtk::make_managed<Gtk::DropDown>(style_list);
+   m_line_style->set_selected(att->GetLineStyle());
+
+   addLine("Line style", m_line_style);
+
+   auto adjustment = Gtk::Adjustment::create(/* value */ att->GetLineWidth(), /* lower */ 1, /* upper */ 20,
+                                            /* step_increment */ 1, /* page_increment */ 5.0);
+
+   m_line_width = Gtk::make_managed<Gtk::SpinButton>(adjustment);
+   m_line_width->set_digits(0); // 0 decimal places -> integer display
+
+   addLine("Line width", m_line_width);
+
+   addOkCancelButtons();
+
+   present();
+
+   fAttLine = att;
+}
+
+
+void Gtk4MethodDialog::attFillDialog(TAttFill *att)
+{
+   addColorInput(att->GetFillColor());
+
+   addOkCancelButtons();
+
+   present();
+
+   fAttFill = att;
+}
+
+void Gtk4MethodDialog::attTextDialog(TAttText *att)
+{
+   addColorInput(att->GetTextColor());
+
+   addOkCancelButtons();
+
+   present();
+
+   fAttText = att;
+
+}
+
+void Gtk4MethodDialog::attMarkerDialog(TAttMarker *att)
+{
+   addColorInput(att->GetMarkerColor());
+
+   addOkCancelButtons();
+
+   present();
+
+   fAttMarker = att;
+}
+
+
+void Gtk4MethodDialog::on_ok_button_clicked()
+{
+   if (fMenu && fObject) {
+
+      TObjArray argslist(fArgs.size());
+
+      for (auto entry : fArgs) {
+         Glib::ustring v = entry->get_text();
+         argslist.AddLast(new TObjString(v.c_str()));
+      }
+
+      close();
+
+      fMenu->Execute(fObject, fFunc, &argslist);
+
+      return;
+   }
+
+   Gdk::RGBA selected_color;
+   Color_t newColorIdx = 0;
+   if (m_color_button) {
+      auto selected_color = m_color_button->get_rgba();
+      newColorIdx = TColor::GetColor(selected_color.get_red(),
+                                     selected_color.get_green(),
+                                     selected_color.get_blue(),
+                                     selected_color.get_alpha());
+   }
+
+   if (fAttLine) {
+      fAttLine->SetLineColor(newColorIdx);
+      fAttLine->SetLineStyle(m_line_style->get_selected());
+      fAttLine->SetLineWidth(m_line_width->get_value());
+   } else if (fAttFill) {
+      fAttFill->SetFillColor(newColorIdx);
+   } else if (fAttText) {
+      fAttText->SetTextColor(newColorIdx);
+   } else if (fAttMarker) {
+      fAttMarker->SetMarkerColor(newColorIdx);
+   }
+
+   close();
+
+   if (gPad)
+      gPad->ModifiedUpdate();
+
 }

@@ -18,25 +18,30 @@
 class TContextMenu;
 class TObject;
 class TFunction;
+class TAttLine;
+class TAttFill;
+class TAttText;
+class TAttMarker;
 
 class Gtk4MethodDialog: public Gtk::Window {
 
    public:
       Gtk4MethodDialog(unsigned width = 400, unsigned height = 200);
 
-      //QString getArg(int n);
-
       void methodDialog(TContextMenu *menu, TObject *object, TFunction* func);
 
-      //void MenuCommandExecuted(TObject *obj, const char *method_name);
+      void attLineDialog(TAttLine *att);
+      void attFillDialog(TAttFill *att);
+      void attTextDialog(TAttText *att);
+      void attMarkerDialog(TAttMarker *att);
 
    protected:
 
-      void on_color_changed();
       void on_ok_button_clicked();
-      void on_cancel_button_clicked();
 
-      void addColorInput(Gtk::Box *box);
+      void addLine(const char *txt, Gtk::Widget *widget);
+
+      void addColorInput(int colindx);
 
       void addArg(const char *argname, const char *value, const char *type);
 
@@ -50,6 +55,14 @@ class Gtk4MethodDialog: public Gtk::Window {
       TContextMenu *fMenu = nullptr;
       TObject *fObject = nullptr;
       TFunction *fFunc = nullptr;
+
+      TAttLine *fAttLine = nullptr;
+      TAttFill *fAttFill = nullptr;
+      TAttText *fAttText = nullptr;
+      TAttMarker *fAttMarker = nullptr;
+
+      Gtk::DropDown *m_line_style = nullptr;
+      Gtk::SpinButton *m_line_width = nullptr;
 };
 
 #endif
