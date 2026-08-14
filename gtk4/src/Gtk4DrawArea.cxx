@@ -11,7 +11,6 @@
 #include "Gtk4DrawArea.h"
 
 #include <cmath>
-#include <iostream>
 
 #include "TGtk4PadPainter.h"
 #include "TCanvas.h"
@@ -60,15 +59,6 @@ Gtk4DrawArea::Gtk4DrawArea()
    );
 
    add_controller(m_scroll_controller);
-
-
-   auto menu_model = Gio::Menu::create();
-   menu_model->append("Edit Item", "menu.edit");
-   menu_model->append("Delete Item", "menu.delete");
-
-   m_context_menu = Gtk::make_managed<Gtk::PopoverMenu>(menu_model);
-   m_context_menu->set_parent(*this);
-   m_context_menu->set_has_arrow(false); // Removes the little popover triangle point
 }
 
 void Gtk4DrawArea::on_draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height)
@@ -110,26 +100,24 @@ void Gtk4DrawArea::on_mouse_click(int n_press, double x, double y)
    if (!fCanvas)
       return;
 
-   Gdk::ModifierType modifiers = m_click_gesture->get_current_event_state();
+   auto evnt = kNoEvent;
 
-   std::cout << "Mouse cursor clicked X=" << x << ", Y=" << y << "\n";
-
-   if ((modifiers & Gdk::ModifierType::BUTTON1_MASK) == Gdk::ModifierType::BUTTON1_MASK) {
-      if (n_press > 1)
-         fCanvas->HandleInput(kButton1Double, (int) x, (int) y);
-      else
-         fCanvas->HandleInput(kButton1Down, (int) x, (int) y);
-   } else if ((modifiers & Gdk::ModifierType::BUTTON2_MASK) == Gdk::ModifierType::BUTTON2_MASK) {
-      if (n_press > 1)
-         fCanvas->HandleInput(kButton2Double, (int) x, (int) y);
-      else
-         fCanvas->HandleInput(kButton2Down, (int) x, (int) y);
-   } else if ((modifiers & Gdk::ModifierType::BUTTON3_MASK) == Gdk::ModifierType::BUTTON3_MASK) {
-      if (n_press > 1)
-         fCanvas->HandleInput(kButton3Double, (int) x, (int) y);
-      else
-         fCanvas->HandleInput(kButton3Down, (int) x, (int) y);
+   switch(m_click_gesture->get_current_button()) {
+      case GDK_BUTTON_PRIMARY:   // 1, usually left
+         evnt = n_press > 1 ? kButton1Double : kButton1Down;
+         break;
+      case GDK_BUTTON_MIDDLE:    // 2
+         evnt = n_press > 1 ? kButton2Double : kButton2Down;
+         break;
+      case GDK_BUTTON_SECONDARY: // 3, usually right
+         evnt = n_press > 1 ? kButton3Double : kButton3Down;
+         break;
+      default:
+         break;
    }
+
+   if (evnt != kNoEvent)
+      fCanvas->HandleInput(evnt, (int) x, (int) y);
 }
 
 void Gtk4DrawArea::on_mouse_released(int n_press, double x, double y)
@@ -137,33 +125,29 @@ void Gtk4DrawArea::on_mouse_released(int n_press, double x, double y)
    if (!fCanvas)
       return;
 
-   Gdk::ModifierType modifiers = m_click_gesture->get_current_event_state();
+   auto evnt = kNoEvent;
 
-   std::cout << "Mouse released X=" << x << ", Y=" << y << "\n";
-
-   if ((modifiers & Gdk::ModifierType::BUTTON1_MASK) == Gdk::ModifierType::BUTTON1_MASK) {
-      fCanvas->HandleInput(kButton1Up, (int) x, (int) y);
-   } else if ((modifiers & Gdk::ModifierType::BUTTON2_MASK) == Gdk::ModifierType::BUTTON2_MASK) {
-      fCanvas->HandleInput(kButton2Up, (int) x, (int) y);
-   } else if ((modifiers & Gdk::ModifierType::BUTTON3_MASK) == Gdk::ModifierType::BUTTON3_MASK) {
-      fCanvas->HandleInput(kButton3Up, (int) x, (int) y);
-
-      /*
-      Gdk::Rectangle rect(x, y, 1, 1);
-
-      // 2. Snap the context menu anchor to this exact tiny point rectangle
-      m_context_menu->set_pointing_to(rect);
-
-      // 3. Open the popup menu smoothly on screen
-      m_context_menu->popup();
-      */
+   switch(m_click_gesture->get_current_button()) {
+      case GDK_BUTTON_PRIMARY:   // 1, usually left
+         evnt = kButton1Up;
+         break;
+      case GDK_BUTTON_MIDDLE:    // 2
+         evnt = kButton2Up;
+         break;
+      case GDK_BUTTON_SECONDARY: // 3, usually right
+         evnt = kButton3Up;
+         break;
+      default:
+         break;
    }
+
+   if (evnt != kNoEvent)
+      fCanvas->HandleInput(evnt, (int) x, (int) y);
 }
 
 
 void Gtk4DrawArea::on_mouse_enter(double x, double y)
 {
-   std::cout << "Mouse ENTER to: X=" << x << ", Y=" << y << "\n";
    fLastMouseX = x;
    fLastMouseY = y;
 
@@ -173,7 +157,6 @@ void Gtk4DrawArea::on_mouse_enter(double x, double y)
 
 void Gtk4DrawArea::on_mouse_leave()
 {
-   std::cout << "Mouse LEAVE\n";
    if (fCanvas)
       fCanvas->HandleInput(kMouseLeave, 0, 0);
 }
@@ -190,27 +173,20 @@ void Gtk4DrawArea::on_mouse_move(double x, double y)
 
    Gdk::ModifierType modifiers = m_motion_controller->get_current_event_state();
 
-   // Check if the left mouse button (Button 1) is held down
+   auto evnt = kMouseMotion;
    if ((modifiers & Gdk::ModifierType::BUTTON1_MASK) == Gdk::ModifierType::BUTTON1_MASK) {
-      fCanvas->HandleInput(kButton1Motion, (int) x, (int) y);
-
-        std::cout << "Left button held down at position: " << x << ", " << y << std::endl;
+      evnt = kButton1Motion;
    } else if ((modifiers & Gdk::ModifierType::BUTTON3_MASK) == Gdk::ModifierType::BUTTON3_MASK) {
-      fCanvas->HandleInput(kButton3Motion, (int) x, (int) y);
-       std::cout << "Right button held down at position: " << x << ", " << y << std::endl;
-   } else {
-      std::cout << "Mouse cursor moved to: X=" << x << ", Y=" << y << "\n";
-
-      fCanvas->HandleInput(kMouseMotion, (int) x, (int) y);
+      evnt = kButton3Motion;
    }
+
+   fCanvas->HandleInput(evnt, (int) x, (int) y);
 }
 
 bool Gtk4DrawArea::on_mouse_scroll(double dx, double dy)
 {
-   std::cout << "On mouse scroll dy = " << dy << "\n";
-
-    if (fCanvas)
-       fCanvas->HandleInput(dy > 0 ? kWheelUp : kWheelDown, (int) fLastMouseX, (int) fLastMouseY);
+   if (fCanvas)
+      fCanvas->HandleInput(dy < 0 ? kWheelUp : kWheelDown, (int) fLastMouseX, (int) fLastMouseY);
 
    return true;
 }
