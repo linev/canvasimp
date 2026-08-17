@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(ROOTRaylibCanvas CXX)
 
 # 2. Locate CERN ROOT configuration files
-find_package(ROOT REQUIRED COMPONENTS Core RIO Hist Gpad Graf)
+find_package(ROOT REQUIRED COMPONENTS Core Gpad)
 include(${ROOT_USE_FILE})
 
 
@@ -10,6 +10,8 @@ include(${ROOT_USE_FILE})
 # set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
+find_package(Freetype REQUIRED)
 
 # 3. Locate raylib package configuration files
 find_package(raylib QUIET)
@@ -64,7 +66,7 @@ endif()
 
 # ROOT libraries are linked as PUBLIC so that any application linking against
 # your library will also inherit the necessary ROOT library mappings automatically.
-target_link_libraries(${PROJECT_NAME} PUBLIC ${ROOT_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PUBLIC ROOT::Gpad ROOT::Graf Freetype::Freetype)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy

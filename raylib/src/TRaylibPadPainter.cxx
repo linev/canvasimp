@@ -19,7 +19,14 @@
 #include "TPoint.h"
 #include "TROOT.h"
 #include "TColor.h"
+
 #include "RStipples.h"
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_GLYPH_H
+#include "TTF.h"
+
 
 #include <raylib.h>
 #include <raymath.h>
@@ -610,104 +617,187 @@ void TRaylibPadPainter::DrawText(Double_t x, Double_t y, const char *text, EText
 {
    Int_t px = gPad->XtoAbsPixel(x);
    Int_t py = gPad->YtoAbsPixel(y);
-   PaintTextHelper(px, py, text);
+
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 void TRaylibPadPainter::DrawText(Double_t x, Double_t y, const wchar_t *text, ETextMode /*mode*/)
 {
    Int_t px = gPad->XtoAbsPixel(x);
    Int_t py = gPad->YtoAbsPixel(y);
-   std::string utf8 = WCharToUtf8(text);
-   PaintTextHelper(px, py, utf8.c_str());
+
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 void TRaylibPadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode /*mode*/)
 {
    Int_t px = gPad->UtoAbsPixel(u);
    Int_t py = gPad->VtoAbsPixel(v);
-   PaintTextHelper(px, py, text);
+
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 void TRaylibPadPainter::DrawTextNDC(Double_t u, Double_t v, const wchar_t *text, ETextMode /*mode*/)
 {
    Int_t px = gPad->UtoAbsPixel(u);
    Int_t py = gPad->VtoAbsPixel(v);
-   std::string utf8 = WCharToUtf8(text);
-   PaintTextHelper(px, py, utf8.c_str());
+
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 void TRaylibPadPainter::DrawTextUrl(Double_t x, Double_t y, const char *text, const char * /*url*/)
 {
    Int_t px = gPad->XtoAbsPixel(x);
    Int_t py = gPad->YtoAbsPixel(y);
-   PaintTextHelper(px, py, text);
+
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
-// ======================== Text Measurement ===============================
+////////////////////////////////////////////////////////////////////////////////
+/// Render TTF glyphs on drawable area
 
-void TRaylibPadPainter::GetTextExtent(Font_t fontid, Double_t size, UInt_t &w, UInt_t &h, const char *mess)
+void TRaylibPadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
 {
-   Font rlFont = LoadFontForId(fontid);
-   if (rlFont.texture.id == 0) {
-      w = h = 0;
-      return;
+   const TAttText &att = GetAttText();
+
+   Int_t txalh = att.GetTextAlign() / 10;
+   Int_t txalv = att.GetTextAlign() % 10;
+
+   FT_Vector alignVector;
+
+   Color col = GetRaylibColor(att.GetTextColor());
+
+
+   switch (txalh) {
+      case 2: alignVector.x = ttf.GetWidth() / 2; break; //center
+      case 3: alignVector.x = ttf.GetWidth(); break; //right
+      default: alignVector.x = 0; break; // left
    }
 
-   Int_t pixelsize = (Int_t)(size * kScale + 0.5);
-   if (pixelsize <= 0)
-      pixelsize = 10;
-
-   Vector2 ts = MeasureTextEx(rlFont, mess, (float)pixelsize, 0.0f);
-   w = (UInt_t)(ts.x + 0.5f);
-   h = (UInt_t)(ts.y + 0.5f);
-
-   UnloadFont(rlFont);
-}
-
-void TRaylibPadPainter::GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const wchar_t *mess)
-{
-   std::string utf8 = WCharToUtf8(mess);
-   GetTextExtent(font, size, w, h, utf8.c_str());
-}
-
-void TRaylibPadPainter::GetTextAscentDescent(Font_t fontid, Double_t size, UInt_t &a, UInt_t &d, const char *mess)
-{
-   Font rlFont = LoadFontForId(fontid);
-   if (rlFont.texture.id == 0) {
-      a = d = 0;
-      return;
+   switch (txalv) {
+      case 2: alignVector.y = ttf.GetAscent() / 2; break; // middle
+      case 3: alignVector.y = ttf.GetAscent(); break; //top
+      default: alignVector.y = 0; break; //bottom
    }
 
-   Int_t pixelsize = (Int_t)(size * kScale + 0.5);
-   if (pixelsize <= 0) pixelsize = 10;
+   FT_Vector_Transform(&alignVector, ttf.GetRotMatrix());
+   alignVector.x = alignVector.x >> 6;
+   alignVector.y = alignVector.y >> 6;
 
-   // Use bounding box from a measurement as ascent/descent approximation
-   Vector2 ts = MeasureTextEx(rlFont, mess, (float)pixelsize, 0.0f);
-   a = (UInt_t)(ts.y * 0.8 + 0.5f);   // ~80% ascent (typographic convention)
-   d = (UInt_t)(ts.y * 0.2 + 0.5f);   // ~20% descent
+   Int_t Xoff = TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
+   Int_t Yoff = TMath::Max(0, (Int_t) -ttf.GetBox().yMin);
+   Int_t w    = ttf.GetBox().xMax + Xoff;
+   Int_t h    = ttf.GetBox().yMax + Yoff;
+   Int_t x1   = px - Xoff - alignVector.x;
+   Int_t y1   = py + Yoff + alignVector.y - h;
 
-   UnloadFont(rlFont);
+//   int width = fDrawArea->get_width();
+//   int height = fDrawArea->get_height();
+
+   // If w or h is 0, very likely the string is only blank characters
+   if (w <= 0 || h <= 0)
+      return;
+
+   // If string falls outside window, there is probably no need to draw it.
+//   if (x1 + w <= 0 || x1 >= width || y1 + h <= 0 || y1 >= height)
+//      return;
+
+//   auto ctx = fDrawArea->GetContext();
+
+//   SetGtk4Color(att.GetTextColor());
+
+
+   for (UInt_t n = 0; n < ttf.GetNumGlyphs(); n++) {
+      if (auto glyph = ttf.GetGlyphBitmap(n)) {
+         FT_Bitmap &bitmap = glyph->bitmap;
+
+         if (bitmap.width == 0 || bitmap.rows == 0)
+            continue; // e.g. space
+
+         std::vector<unsigned char> pixels(bitmap.width * bitmap.rows * 2);
+         for (unsigned int y = 0; y < bitmap.rows; ++y)  {
+            const unsigned char *srcRow = bitmap.buffer + y * bitmap.pitch; // FreeType's own stride
+            for (unsigned int x = 0; x < bitmap.width; ++x) {
+                pixels[(y * bitmap.width + x) * 2 + 0] = 255;       // gray
+                pixels[(y * bitmap.width + x) * 2 + 1] = srcRow[x];  // alpha
+            }
+         }
+
+         Image img = {
+            .data = pixels.data(),
+            .width = (int)bitmap.width,
+            .height = (int)bitmap.rows,
+            .mipmaps = 1,
+            .format = PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA
+         };
+
+         // Upload to GPU memory
+         Texture2D texture = LoadTextureFromImage(img);
+
+         Int_t bx = glyph->left + Xoff;
+         Int_t by = h - glyph->top - Yoff;
+
+         DrawTexture(texture, x1 + bx, y1 + by, col);
+
+         // Always unload transient textures to avoid GPU memory leaks!
+         // but we should wait until rendering is finished
+
+         fTextures.push_back(texture);
+         // UnloadTexture(texture);
+      }
+   }
 }
 
-void TRaylibPadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const wchar_t *mess)
+void TRaylibPadPainter::CleanupTextures()
 {
-   std::string utf8 = WCharToUtf8(mess);
-   GetTextAscentDescent(font, size, a, d, utf8.c_str());
-}
+   for (auto &texture : fTextures)
+      UnloadTexture(texture);
 
-UInt_t TRaylibPadPainter::GetTextAdvance(Font_t fontid, Double_t size, const char *text, Bool_t /*kern*/)
-{
-   Font rlFont = LoadFontForId(fontid);
-   if (rlFont.texture.id == 0)
-      return 0;
-
-   Int_t pixelsize = (Int_t)(size * kScale + 0.5);
-   if (pixelsize <= 0) pixelsize = 10;
-
-   Vector2 ts = MeasureTextEx(rlFont, text, (float)pixelsize, 0.0f);
-   UInt_t advance = (UInt_t)(ts.x + 0.5f);
-
-   UnloadFont(rlFont);
-   return advance;
+   fTextures.clear();
 }
 

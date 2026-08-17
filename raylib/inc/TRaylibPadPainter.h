@@ -16,6 +16,7 @@
 
 #include <map>
 #include <string>
+#include <list>
 
 #include <raylib.h>
 
@@ -23,6 +24,10 @@
 // Forward declare raylib types to avoid including raylib.h in the header
 // (which would force every consumer to link against raylib)
 struct RLFont;
+
+// forward declaration for TTF handle
+class TTFhandle;
+
 
 namespace ROOT {
 namespace Experimental {
@@ -52,6 +57,12 @@ protected:
 
    // Current global alpha for transparency support
    float GetCurrentAlpha() const;
+
+   void RenderTTF(Int_t px, Int_t py, TTFhandle &ttf);
+
+   void CleanupTextures();
+
+   std::list<Texture2D> fTextures;
 
 public:
 
@@ -104,13 +115,6 @@ public:
    void DrawTextNDC(Double_t u, Double_t v, const wchar_t *text, ETextMode mode) override;
 
    void DrawTextUrl(Double_t x, Double_t y, const char *text, const char *url) override;
-
-   // Text measurement
-   void GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const char *mess) override;
-   void GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const wchar_t *mess) override;
-   void GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const char *mess) override;
-   void GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const wchar_t *mess) override;
-   UInt_t GetTextAdvance(Font_t font, Double_t size, const char *text, Bool_t kern) override;
 
 private:
    TRaylibPadPainter(const TRaylibPadPainter &) = delete;

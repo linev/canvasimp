@@ -231,6 +231,10 @@ Bool_t TRaylibCanvas::PerformUpdate(Bool_t /*async*/)
 
    EndTextureMode();
 
+   auto p = dynamic_cast<TRaylibPadPainter *> (Canvas()->GetPainter());
+   if (p)
+      p->CleanupTextures();
+
    // empty for now
    return kTRUE;
 }
