@@ -15,6 +15,7 @@
 
 
 class Gtk4DrawArea;
+class TTFhandle;
 
 namespace ROOT {
 namespace Experimental {
@@ -37,9 +38,7 @@ protected:
    void ApplyFillBrush();
    Bool_t SelectFont(Font_t id, Float_t size);
 
-   void PaintGtk4String(int x, int y, const char *s);
-
-   void PaintGtk4StringTTF(int x, int y, const char *s);
+   void RenderTTF(Int_t px, Int_t py, TTFhandle &ttf);
 
 public:
 
@@ -90,13 +89,7 @@ public:
    void     DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode) override;
    void     DrawTextNDC(Double_t u, Double_t v, const wchar_t *text, ETextMode mode) override;
 
-   void     DrawTextUrl(Double_t x, Double_t y, const char *text, const char *url) override;
-
-   void    GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const char *mess) override;
-   void    GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const wchar_t *mess) override;
-   void    GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const char *mess) override;
-   void    GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const wchar_t *mess) override;
-   UInt_t  GetTextAdvance(Font_t font, Double_t size, const char *text, Bool_t kern) override;
+   void     DrawTextUrl(Double_t x, Double_t y, const char *text, const char *) override;
 
    Bool_t   IsSupportAlpha() const override { return kTRUE; }
 

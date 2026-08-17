@@ -524,7 +524,16 @@ void TGtk4PadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMo
    const Int_t px = gPad->XtoAbsPixel(x);
    const Int_t py = gPad->YtoAbsPixel(y);
 
-   PaintGtk4String(px, py, text);
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -535,7 +544,16 @@ void TGtk4PadPainter::DrawTextUrl(Double_t x, Double_t y, const char *text, cons
    const Int_t px = gPad->XtoAbsPixel(x);
    const Int_t py = gPad->YtoAbsPixel(y);
 
-   PaintGtk4String(px, py, text);
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -546,7 +564,16 @@ void TGtk4PadPainter::DrawText(Double_t x, Double_t y, const wchar_t *text, ETex
    const Int_t px = gPad->XtoAbsPixel(x);
    const Int_t py = gPad->YtoAbsPixel(y);
 
-   PaintGtk4String(px, py, "some wchar");
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -557,7 +584,16 @@ void TGtk4PadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETex
    const Int_t px = gPad->UtoAbsPixel(u);
    const Int_t py = gPad->VtoAbsPixel(v);
 
-   PaintGtk4String(px, py, text);
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -568,7 +604,16 @@ void TGtk4PadPainter::DrawTextNDC(Double_t  u, Double_t v, const wchar_t *text, 
    const Int_t px = gPad->UtoAbsPixel(u);
    const Int_t py = gPad->VtoAbsPixel(v);
 
-   PaintGtk4String(px, py, "some wchar");
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 
@@ -603,41 +648,28 @@ Bool_t TGtk4PadPainter::SelectFont(Font_t id, Float_t size)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Paint text using TTF functionality
+/// Render TTF glyphs on drawable area
 
-void TGtk4PadPainter::PaintGtk4StringTTF(int x, int y, const char *s)
+void TGtk4PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
 {
    const TAttText &att = GetAttText();
-
-   auto textsize = att.GetTextSizePixels(*gPad);
-
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(textsize);
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(s);
-
-   ttf.LayoutGlyphs();
-
 
    Int_t txalh = att.GetTextAlign() / 10;
    Int_t txalv = att.GetTextAlign() % 10;
 
    FT_Vector alignVector;
-   alignVector.x = 0; alignVector.y = 0;
+
 
    switch (txalh) {
-      case 0:
-      case 1: break; //left
       case 2: alignVector.x = ttf.GetWidth() / 2; break; //center
       case 3: alignVector.x = ttf.GetWidth(); break; //right
+      default: alignVector.x = 0; break; // left
    }
 
    switch (txalv) {
-      case 1: break; //bottom
       case 2: alignVector.y = ttf.GetAscent() / 2; break; // middle
       case 3: alignVector.y = ttf.GetAscent(); break; //top
+      default: alignVector.y = 0; break; //bottom
    }
 
    FT_Vector_Transform(&alignVector, ttf.GetRotMatrix());
@@ -648,13 +680,11 @@ void TGtk4PadPainter::PaintGtk4StringTTF(int x, int y, const char *s)
    Int_t Yoff = TMath::Max(0, (Int_t) -ttf.GetBox().yMin);
    Int_t w    = ttf.GetBox().xMax + Xoff;
    Int_t h    = ttf.GetBox().yMax + Yoff;
-   Int_t x1   = x - Xoff - alignVector.x;
-   Int_t y1   = y + Yoff + alignVector.y - h;
+   Int_t x1   = px - Xoff - alignVector.x;
+   Int_t y1   = py + Yoff + alignVector.y - h;
 
    int width = fDrawArea->get_width();
    int height = fDrawArea->get_height();
-
-   printf("Paint text with TTF %s\n", s);
 
    // If w or h is 0, very likely the string is only blank characters
    if (w <= 0 || h <= 0)
@@ -696,148 +726,4 @@ void TGtk4PadPainter::PaintGtk4StringTTF(int x, int y, const char *s)
          ctx->mask(surface, x1 + bx, y1 + by); // A8 surface used as an alpha mask
       }
    }
-}
-
-
-
-////////////////////////////////////////////////////////////////////////////////
-/// Actual text painting image
-
-void TGtk4PadPainter::PaintGtk4String(int x, int y, const char *s)
-{
-   PaintGtk4StringTTF(x, y, s);
-   return;
-
-   const TAttText &att = GetAttText();
-
-   auto textsize = att.GetTextSizePixels(*gPad);
-
-   if (!SelectFont(att.GetTextFont(), textsize))
-      return;
-
-
-   auto ctx = fDrawArea->GetContext();
-
-   Cairo::TextExtents extents;
-   ctx->get_text_extents(s, extents);
-
-   Cairo::FontExtents font_metrics;
-   ctx->get_font_extents(font_metrics);
-
-
-   Int_t txalh = att.GetTextAlign() / 10;
-   Int_t txalv = att.GetTextAlign() % 10;
-
-   // to make alignment same way as in TGX11TTF
-   // width includes width and bearing
-   // height only includes font accent
-   Int_t t_width = extents.width + extents.x_bearing;
-   Int_t t_height = font_metrics.ascent;
-
-   switch (txalh) {
-      case 0:
-      case 1: break; //left
-      case 2: x -= t_width / 2; break; //center
-      case 3: x -= t_width; break; //right
-   }
-
-   switch (txalv) {
-      case 1: break; //bottom
-      case 2: y -= t_height / 2; break; // middle
-      case 3: y -= t_height; break; //top
-   }
-
-   ctx->move_to(x, y);
-
-   SetGtk4Color(att.GetTextColor());
-
-   ctx->show_text(s);
-   // TODO: handle rotation
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text extent
-
-void TGtk4PadPainter::GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const char *mess)
-{
-   if (!SelectFont(font, size))
-      return;
-
-   auto ctx = fDrawArea->GetContext();
-
-   Cairo::TextExtents extents;
-   ctx->get_text_extents(mess, extents);
-   w = extents.width;
-   h = extents.height;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text extent
-
-void TGtk4PadPainter::GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const wchar_t *mess)
-{
-   if (!SelectFont(font, size))
-      return;
-
-   auto ctx = fDrawArea->GetContext();
-
-   Cairo::TextExtents extents;
-   ctx->get_text_extents("Any text", extents);
-   w = extents.width;
-   h = extents.height;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text accent / descent
-
-void TGtk4PadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const char *mess)
-{
-   if (!SelectFont(font, size)) {
-      a = d = 0;
-      return;
-   }
-
-   auto ctx = fDrawArea->GetContext();
-
-   Cairo::FontExtents font_metrics;
-
-   ctx->get_font_extents(font_metrics);
-
-   a = TMath::Abs(font_metrics.ascent);
-   d = TMath::Abs(font_metrics.descent);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text accent / descent
-
-void TGtk4PadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const wchar_t *mess)
-{
-   if (!SelectFont(font, size)) {
-      a = d = 0;
-      return;
-   }
-
-   auto ctx = fDrawArea->GetContext();
-
-   Cairo::FontExtents font_metrics;
-
-   ctx->get_font_extents(font_metrics);
-
-   a = TMath::Abs(font_metrics.ascent);
-   d = TMath::Abs(font_metrics.descent);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text advance
-
-UInt_t TGtk4PadPainter::GetTextAdvance(Font_t font, Double_t size, const char *mess, Bool_t)
-{
-   if (!SelectFont(font, size))
-      return 0;
-
-   auto ctx = fDrawArea->GetContext();
-
-   Cairo::TextExtents extents;
-   ctx->get_text_extents(mess, extents);
-   return extents.x_advance;
 }
