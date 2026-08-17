@@ -25,6 +25,12 @@
 
 #include "QPaintWidget.h"
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_GLYPH_H
+#include "TTF.h"
+
+
 #include <QFont>
 #include <QFontDatabase>
 #include <QRect>
@@ -377,7 +383,16 @@ void TQt6PadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMod
    const Int_t px = gPad->XtoAbsPixel(x);
    const Int_t py = gPad->YtoAbsPixel(y);
 
-   PaintQString(px, py, QString::fromLatin1(text));
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -388,7 +403,16 @@ void TQt6PadPainter::DrawTextUrl(Double_t x, Double_t y, const char *text, const
    const Int_t px = gPad->XtoAbsPixel(x);
    const Int_t py = gPad->YtoAbsPixel(y);
 
-   PaintQString(px, py, QString::fromLatin1(text));
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -399,7 +423,16 @@ void TQt6PadPainter::DrawText(Double_t x, Double_t y, const wchar_t *text, EText
    const Int_t px = gPad->XtoAbsPixel(x);
    const Int_t py = gPad->YtoAbsPixel(y);
 
-   PaintQString(px, py, QString::fromWCharArray(text));
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -410,7 +443,16 @@ void TQt6PadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, EText
    const Int_t px = gPad->UtoAbsPixel(u);
    const Int_t py = gPad->VtoAbsPixel(v);
 
-   PaintQString(px, py, QString::fromLatin1(text));
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -421,7 +463,16 @@ void TQt6PadPainter::DrawTextNDC(Double_t  u, Double_t v, const wchar_t *text, E
    const Int_t px = gPad->UtoAbsPixel(u);
    const Int_t py = gPad->VtoAbsPixel(v);
 
-   PaintQString(px, py, QString::fromWCharArray(text));
+   const TAttText &att = GetAttText();
+
+   TTFhandle ttf;
+   ttf.SetTextFont(att.GetTextFont());
+   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
+   ttf.SetRotationMatrix(att.GetTextAngle());
+   ttf.PrepareString(text);
+   ttf.LayoutGlyphs();
+
+   RenderTTF(px, py, ttf);
 }
 
 
@@ -633,88 +684,87 @@ void TQt6PadPainter::PaintQString(int x, int y, const QString &s)
    }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text extent
 
-void TQt6PadPainter::GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const char *mess)
+////////////////////////////////////////////////////////////////////////////////
+/// Render TTF glyphs on drawable area
+
+void TQt6PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
 {
-   auto family = GetFontFamily(font);
-   if (family.isEmpty())
+   const TAttText &att = GetAttText();
+
+   Int_t txalh = att.GetTextAlign() / 10;
+   Int_t txalv = att.GetTextAlign() % 10;
+
+   FT_Vector alignVector;
+
+   switch (txalh) {
+      case 2: alignVector.x = ttf.GetWidth() / 2; break; //center
+      case 3: alignVector.x = ttf.GetWidth(); break; //right
+      default: alignVector.x = 0; break; // left
+   }
+
+   switch (txalv) {
+      case 2: alignVector.y = ttf.GetAscent() / 2; break; // middle
+      case 3: alignVector.y = ttf.GetAscent(); break; //top
+      default: alignVector.y = 0; break; //bottom
+   }
+
+   FT_Vector_Transform(&alignVector, ttf.GetRotMatrix());
+   alignVector.x = alignVector.x >> 6;
+   alignVector.y = alignVector.y >> 6;
+
+   Int_t Xoff = TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
+   Int_t Yoff = TMath::Max(0, (Int_t) -ttf.GetBox().yMin);
+   Int_t w    = ttf.GetBox().xMax + Xoff;
+   Int_t h    = ttf.GetBox().yMax + Yoff;
+   Int_t x1   = px - Xoff - alignVector.x;
+   Int_t y1   = py + Yoff + alignVector.y - h;
+
+   int width = fPaintWidget->width();
+   int height = fPaintWidget->height();
+
+   // If w or h is 0, very likely the string is only blank characters
+   if (w <= 0 || h <= 0)
       return;
 
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
-
-   QFontMetrics fm(QFont(family, pixelsize));
-   QRect rect = fm.boundingRect(QString::fromLatin1(mess));
-
-   w = rect.width();
-   h = rect.height();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text extent
-
-void TQt6PadPainter::GetTextExtent(Font_t font, Double_t size, UInt_t &w, UInt_t &h, const wchar_t *mess)
-{
-   auto family = GetFontFamily(font);
-   if (family.isEmpty())
+   // If string falls outside window, there is probably no need to draw it.
+   if (x1 + w <= 0 || x1 >= width || y1 + h <= 0 || y1 >= height)
       return;
 
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
+   auto painter = fPaintWidget->getPainter();
 
-   QFontMetrics fm(QFont(family, pixelsize));
-   QRect rect = fm.boundingRect(QString::fromWCharArray(mess));
 
-   w = rect.width();
-   h = rect.height();
+   auto textColor = GetQColor(att.GetTextColor());
+
+   for (UInt_t n = 0; n < ttf.GetNumGlyphs(); n++) {
+      if (auto glyph = ttf.GetGlyphBitmap(n)) {
+         FT_Bitmap &bmp = glyph->bitmap;
+
+         if (bmp.width == 0 || bmp.rows == 0)
+            continue; // e.g. space
+
+         QImage colorFill(bmp.width, bmp.rows, QImage::Format_ARGB32);
+         colorFill.fill(textColor);
+
+         Int_t bx = glyph->left + Xoff;
+         Int_t by = h - glyph->top - Yoff;
+
+         QPainter maskPainter(&colorFill);
+
+         QImage maskImage(
+            bmp.buffer,
+            bmp.width,
+            bmp.rows,
+            bmp.pitch,
+            QImage::Format_Alpha8
+         );
+
+         maskPainter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+         maskPainter.drawImage(0, 0, maskImage);
+         maskPainter.end();
+
+         painter->drawImage(QPoint(x1 + bx, y1 + by), colorFill);
+      }
+   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text accent / descent
-
-void TQt6PadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const char *mess)
-{
-   auto family = GetFontFamily(font);
-   if (family.isEmpty())
-      return;
-
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
-
-   QFontMetrics fm(QFont(family, pixelsize));
-   QRect rect = fm.boundingRect(QString::fromLatin1(mess));
-
-   a = -rect.top();
-   d = rect.bottom();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text accent / descent
-
-void TQt6PadPainter::GetTextAscentDescent(Font_t font, Double_t size, UInt_t &a, UInt_t &d, const wchar_t *mess)
-{
-   auto family = GetFontFamily(font);
-   if (family.isEmpty())
-      return;
-
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
-
-   QFontMetrics fm(QFont(family, pixelsize));
-   QRect rect = fm.boundingRect(QString::fromWCharArray(mess));
-
-   a = -rect.top();
-   d = rect.bottom();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Returns text advance
-
-UInt_t TQt6PadPainter::GetTextAdvance(Font_t font, Double_t size, const char *text, Bool_t)
-{
-   auto family = GetFontFamily(font);
-   if (family.isEmpty())
-      return 0;
-   Int_t pixelsize = (Int_t) (size*kScale+0.5);
-
-   QFontMetrics fm(QFont(family, pixelsize));
-   return fm.horizontalAdvance(QString::fromLatin1(text));
-}
