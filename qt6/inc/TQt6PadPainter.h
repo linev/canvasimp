@@ -41,9 +41,6 @@ protected:
 
    QPaintWidget *fPaintWidget = nullptr;
 
-   void PaintQString(int x, int y, const QString &s);
-
-   static QString GetFontFamily(Font_t id);
    static QColor GetQColor(Color_t id);
    QPen GetLinePen();
    QBrush GetFillBrush();
