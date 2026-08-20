@@ -599,6 +599,9 @@ void TQt6PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
    if (x1 + w <= 0 || x1 >= width || y1 + h <= 0 || y1 >= height)
       return;
 
+   x1 += Xoff;
+   y1 += h - Yoff;
+
    auto painter = fPaintWidget->getPainter();
 
 
@@ -614,8 +617,8 @@ void TQt6PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
          QImage colorFill(bmp.width, bmp.rows, QImage::Format_ARGB32);
          colorFill.fill(textColor);
 
-         Int_t bx = glyph->left + Xoff;
-         Int_t by = h - glyph->top - Yoff;
+         Int_t bx = glyph->left;
+         Int_t by = -glyph->top;
 
          QPainter maskPainter(&colorFill);
 

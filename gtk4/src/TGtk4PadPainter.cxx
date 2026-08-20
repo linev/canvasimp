@@ -694,6 +694,9 @@ void TGtk4PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
    if (x1 + w <= 0 || x1 >= width || y1 + h <= 0 || y1 >= height)
       return;
 
+   x1 += Xoff;
+   y1 += h - Yoff;
+
    auto ctx = fDrawArea->GetContext();
 
    SetGtk4Color(att.GetTextColor());
@@ -705,8 +708,8 @@ void TGtk4PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
          if (bmp.width == 0 || bmp.rows == 0)
             continue; // e.g. space
 
-         Int_t bx = glyph->left + Xoff;
-         Int_t by = h - glyph->top - Yoff;
+         Int_t bx = glyph->left;
+         Int_t by = -glyph->top;
 
          // Cairo's A8 surfaces need their own row stride (padding), which
          // usually differs from FreeType's bmp.pitch - copy row by row

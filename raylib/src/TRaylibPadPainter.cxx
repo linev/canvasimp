@@ -751,6 +751,9 @@ void TRaylibPadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
 
 //   SetGtk4Color(att.GetTextColor());
 
+   x1 += Xoff;
+   y1 += h - Yoff;
+
 
    for (UInt_t n = 0; n < ttf.GetNumGlyphs(); n++) {
       if (auto glyph = ttf.GetGlyphBitmap(n)) {
@@ -779,8 +782,8 @@ void TRaylibPadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
          // Upload to GPU memory
          Texture2D texture = LoadTextureFromImage(img);
 
-         Int_t bx = glyph->left + Xoff;
-         Int_t by = h - glyph->top - Yoff;
+         Int_t bx = glyph->left;
+         Int_t by = -glyph->top;
 
          DrawTexture(texture, x1 + bx, y1 + by, col);
 
