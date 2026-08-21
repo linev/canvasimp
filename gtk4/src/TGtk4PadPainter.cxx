@@ -517,189 +517,27 @@ void TGtk4PadPainter::DrawPolyMarker(Int_t nPoints, const Float_t *x, const Floa
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Paint text.
-
-void TGtk4PadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
-{
-   const Int_t px = gPad->XtoAbsPixel(x);
-   const Int_t py = gPad->YtoAbsPixel(y);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Paint text with url
-
-void TGtk4PadPainter::DrawTextUrl(Double_t x, Double_t y, const char *text, const char * /* url */)
-{
-   const Int_t px = gPad->XtoAbsPixel(x);
-   const Int_t py = gPad->YtoAbsPixel(y);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Special version working with wchar_t and required by TMathText.
-
-void TGtk4PadPainter::DrawText(Double_t x, Double_t y, const wchar_t *text, ETextMode /*mode*/)
-{
-   const Int_t px = gPad->XtoAbsPixel(x);
-   const Int_t py = gPad->YtoAbsPixel(y);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Paint text in normalized coordinates.
-
-void TGtk4PadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode /*mode*/)
-{
-   const Int_t px = gPad->UtoAbsPixel(u);
-   const Int_t py = gPad->VtoAbsPixel(v);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Paint text in normalized coordinates.
-
-void TGtk4PadPainter::DrawTextNDC(Double_t  u, Double_t v, const wchar_t *text, ETextMode /*mode*/)
-{
-   const Int_t px = gPad->UtoAbsPixel(u);
-   const Int_t py = gPad->VtoAbsPixel(v);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
 /// Produce image
 
 void TGtk4PadPainter::SaveImage(TVirtualPad * /* pad */, const char * /* fileName */, Int_t /* gtype */) const
 {
 }
 
-Bool_t TGtk4PadPainter::SelectFont(Font_t id, Float_t size)
-{
-   auto ctx = fDrawArea->GetContext();
-   if (!ctx)
-      return kFALSE;
-
-   // same calculation done in the TTF
-   Int_t pixelsize = (Int_t)(size*kScale + 0.5);
-
-   TTFhandle handle;
-   handle.SetTextFont(id);
-   handle.SetTextSize(size);
-
-   // workaround to keep handle until next font selection
-   static auto cairo_font = Cairo::FtFontFace::create(handle.GetFontFace(), 0);
-
-   ctx->set_font_face(cairo_font);
-
-   ctx->set_font_size(pixelsize);
-
-   return kTRUE;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 /// Render TTF glyphs on drawable area
 
-void TGtk4PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
+void TGtk4PadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_unused]] ETextMode mode)
 {
-   const TAttText &att = GetAttText();
+   // left/top corner is provided,
+   // but y pixels in glyph provided in other direction,
+   // therefore one need to move reference point
 
-   Int_t txalh = att.GetTextAlign() / 10;
-   Int_t txalv = att.GetTextAlign() % 10;
-
-   FT_Vector alignVector;
-
-
-   switch (txalh) {
-      case 2: alignVector.x = ttf.GetWidth() / 2; break; //center
-      case 3: alignVector.x = ttf.GetWidth(); break; //right
-      default: alignVector.x = 0; break; // left
-   }
-
-   switch (txalv) {
-      case 2: alignVector.y = ttf.GetAscent() / 2; break; // middle
-      case 3: alignVector.y = ttf.GetAscent(); break; //top
-      default: alignVector.y = 0; break; //bottom
-   }
-
-   FT_Vector_Transform(&alignVector, ttf.GetRotMatrix());
-   alignVector.x = alignVector.x >> 6;
-   alignVector.y = alignVector.y >> 6;
-
-   Int_t Xoff = TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
-   Int_t Yoff = TMath::Max(0, (Int_t) -ttf.GetBox().yMin);
-   Int_t w    = ttf.GetBox().xMax + Xoff;
-   Int_t h    = ttf.GetBox().yMax + Yoff;
-   Int_t x1   = px - Xoff - alignVector.x;
-   Int_t y1   = py + Yoff + alignVector.y - h;
-
-   int width = fDrawArea->get_width();
-   int height = fDrawArea->get_height();
-
-   // If w or h is 0, very likely the string is only blank characters
-   if (w <= 0 || h <= 0)
-      return;
-
-   // If string falls outside window, there is probably no need to draw it.
-   if (x1 + w <= 0 || x1 >= width || y1 + h <= 0 || y1 >= height)
-      return;
-
-   x1 += Xoff;
-   y1 += h - Yoff;
+   px += TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
+   py += ttf.GetBox().yMax;
 
    auto ctx = fDrawArea->GetContext();
 
-   SetGtk4Color(att.GetTextColor());
+   SetGtk4Color(GetAttText().GetTextColor());
 
    for (UInt_t n = 0; n < ttf.GetNumGlyphs(); n++) {
       if (auto glyph = ttf.GetGlyphBitmap(n)) {
@@ -707,9 +545,6 @@ void TGtk4PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
 
          if (bmp.width == 0 || bmp.rows == 0)
             continue; // e.g. space
-
-         Int_t bx = glyph->left;
-         Int_t by = -glyph->top;
 
          // Cairo's A8 surfaces need their own row stride (padding), which
          // usually differs from FreeType's bmp.pitch - copy row by row
@@ -722,11 +557,7 @@ void TGtk4PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
          auto surface =
             Cairo::ImageSurface::create(data.data(), Cairo::Surface::Format::A8, bmp.width, bmp.rows, stride);
 
-         // bitmap_left/top position the glyph relative to the baseline origin
-         // double glyphX = x + slot->bitmap_left;
-         // double glyphY = y - slot->bitmap_top;
-
-         ctx->mask(surface, x1 + bx, y1 + by); // A8 surface used as an alpha mask
+         ctx->mask(surface, px + glyph->left, py - glyph->top);
       }
    }
 }
