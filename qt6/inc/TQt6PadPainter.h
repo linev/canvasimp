@@ -45,8 +45,6 @@ protected:
    QPen GetLinePen();
    QBrush GetFillBrush();
 
-   void RenderTTF(Int_t px, Int_t py, TTFhandle &ttf);
-
 public:
 
    TQt6PadPainter(QPaintWidget *widget = nullptr) { fPaintWidget = widget; }
@@ -55,6 +53,7 @@ public:
 
    Bool_t   IsNative() const override { return kTRUE; }
 
+   Bool_t   IsSupportAlpha() const override { return kTRUE; }
 
    void     SetOpacity(Int_t percent) override;
 
@@ -92,14 +91,7 @@ public:
    void     DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y) override;
    void     DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y) override;
 
-   void     DrawText(Double_t x, Double_t y, const char *text, ETextMode mode) override;
-   void     DrawText(Double_t x, Double_t y, const wchar_t *text, ETextMode mode) override;
-   void     DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode) override;
-   void     DrawTextNDC(Double_t u, Double_t v, const wchar_t *text, ETextMode mode) override;
-
-   void     DrawTextUrl(Double_t x, Double_t y, const char *text, const char *url) override;
-
-   Bool_t   IsSupportAlpha() const override { return kTRUE; }
+   void     DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_unused]] ETextMode mode) override;
 
 private:
    //Let's make this clear:
