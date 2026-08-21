@@ -374,107 +374,6 @@ void TQt6PadPainter::DrawPolyMarker(Int_t nPoints, const Float_t *x, const Float
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Paint text.
-
-void TQt6PadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
-{
-   const Int_t px = gPad->XtoAbsPixel(x);
-   const Int_t py = gPad->YtoAbsPixel(y);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Paint text with url
-
-void TQt6PadPainter::DrawTextUrl(Double_t x, Double_t y, const char *text, const char * /* url */)
-{
-   const Int_t px = gPad->XtoAbsPixel(x);
-   const Int_t py = gPad->YtoAbsPixel(y);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Special version working with wchar_t and required by TMathText.
-
-void TQt6PadPainter::DrawText(Double_t x, Double_t y, const wchar_t *text, ETextMode /*mode*/)
-{
-   const Int_t px = gPad->XtoAbsPixel(x);
-   const Int_t py = gPad->YtoAbsPixel(y);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Paint text in normalized coordinates.
-
-void TQt6PadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode /*mode*/)
-{
-   const Int_t px = gPad->UtoAbsPixel(u);
-   const Int_t py = gPad->VtoAbsPixel(v);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Paint text in normalized coordinates.
-
-void TQt6PadPainter::DrawTextNDC(Double_t  u, Double_t v, const wchar_t *text, ETextMode /*mode*/)
-{
-   const Int_t px = gPad->UtoAbsPixel(u);
-   const Int_t py = gPad->VtoAbsPixel(v);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
 /// Produce image
 
 void TQt6PadPainter::SaveImage(TVirtualPad * /* pad */, const char * /* fileName */, Int_t /* gtype */) const
@@ -556,54 +455,18 @@ QBrush TQt6PadPainter::GetFillBrush()
 ////////////////////////////////////////////////////////////////////////////////
 /// Render TTF glyphs on drawable area
 
-void TQt6PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
+void TQt6PadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_unused]] ETextMode mode)
 {
+   // left/top corner is provided,
+   // but y pixels in glyph provided in other direction,
+   // therefore one need to move reference point
+
+   px += TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
+   py += ttf.GetBox().yMax;
+
    const TAttText &att = GetAttText();
 
-   Int_t txalh = att.GetTextAlign() / 10;
-   Int_t txalv = att.GetTextAlign() % 10;
-
-   FT_Vector alignVector;
-
-   switch (txalh) {
-      case 2: alignVector.x = ttf.GetWidth() / 2; break; //center
-      case 3: alignVector.x = ttf.GetWidth(); break; //right
-      default: alignVector.x = 0; break; // left
-   }
-
-   switch (txalv) {
-      case 2: alignVector.y = ttf.GetAscent() / 2; break; // middle
-      case 3: alignVector.y = ttf.GetAscent(); break; //top
-      default: alignVector.y = 0; break; //bottom
-   }
-
-   FT_Vector_Transform(&alignVector, ttf.GetRotMatrix());
-   alignVector.x = alignVector.x >> 6;
-   alignVector.y = alignVector.y >> 6;
-
-   Int_t Xoff = TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
-   Int_t Yoff = TMath::Max(0, (Int_t) -ttf.GetBox().yMin);
-   Int_t w    = ttf.GetBox().xMax + Xoff;
-   Int_t h    = ttf.GetBox().yMax + Yoff;
-   Int_t x1   = px - Xoff - alignVector.x;
-   Int_t y1   = py + Yoff + alignVector.y - h;
-
-   int width = fPaintWidget->width();
-   int height = fPaintWidget->height();
-
-   // If w or h is 0, very likely the string is only blank characters
-   if (w <= 0 || h <= 0)
-      return;
-
-   // If string falls outside window, there is probably no need to draw it.
-   if (x1 + w <= 0 || x1 >= width || y1 + h <= 0 || y1 >= height)
-      return;
-
-   x1 += Xoff;
-   y1 += h - Yoff;
-
    auto painter = fPaintWidget->getPainter();
-
 
    auto textColor = GetQColor(att.GetTextColor());
 
@@ -616,9 +479,6 @@ void TQt6PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
 
          QImage colorFill(bmp.width, bmp.rows, QImage::Format_ARGB32);
          colorFill.fill(textColor);
-
-         Int_t bx = glyph->left;
-         Int_t by = -glyph->top;
 
          QPainter maskPainter(&colorFill);
 
@@ -634,7 +494,7 @@ void TQt6PadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
          maskPainter.drawImage(0, 0, maskImage);
          maskPainter.end();
 
-         painter->drawImage(QPoint(x1 + bx, y1 + by), colorFill);
+         painter->drawImage(QPoint(px + glyph->left, py - glyph->top), colorFill);
       }
    }
 }
