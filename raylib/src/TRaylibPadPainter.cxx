@@ -47,85 +47,6 @@ const Float_t kScale = 0.75f * 0.93376068f;
     Uses raylib drawing primitives called within BeginDrawing()/EndDrawing() block.
 */
 
-// ============================ Font Table ================================
-
-static const struct {
-   const char *envKey;
-   const char *fontName;
-} gFontTable[] = {
-   {"Root.TTFont.0",       "FreeSansBold.otf"},
-   {"Root.TTFont.1",       "FreeSerifItalic.otf"},
-   {"Root.TTFont.2",       "FreeSerifBold.otf"},
-   {"Root.TTFont.3",       "FreeSerifBoldItalic.otf"},
-   {"Root.TTFont.4",       "texgyreheros-regular.otf"},
-   {"Root.TTFont.5",       "texgyreheros-italic.otf"},
-   {"Root.TTFont.6",       "texgyreheros-bold.otf"},
-   {"Root.TTFont.7",       "texgyreheros-bolditalic.otf"},
-   {"Root.TTFont.8",       "FreeMono.otf"},
-   {"Root.TTFont.9",       "FreeMonoOblique.otf"},
-   {"Root.TTFont.10",      "FreeMonoBold.otf"},
-   {"Root.TTFont.11",      "FreeMonoBoldOblique.otf"},
-   {"Root.TTFont.12",      "symbol.ttf"},
-   {"Root.TTFont.13",      "FreeSerif.otf"},
-   {"Root.TTFont.14",      "wingding.ttf"},
-   {"Root.TTFont.15",      "symbol.ttf"},
-   {"Root.TTFont.STIXGen", "STIXGeneral.otf"},
-   {"Root.TTFont.STIXGenIt", "STIXGeneralItalic.otf"},
-   {"Root.TTFont.STIXGenBd", "STIXGeneralBol.otf"},
-   {"Root.TTFont.STIXGenBdIt", "STIXGeneralBolIta.otf"},
-   {"Root.TTFont.STIXSiz1Sym", "STIXSiz1Sym.otf"},
-   {"Root.TTFont.STIXSiz1SymBd", "STIXSiz1SymBol.otf"},
-   {"Root.TTFont.STIXSiz2Sym", "STIXSiz2Sym.otf"},
-   {"Root.TTFont.STIXSiz2SymBd", "STIXSiz2SymBol.otf"},
-   {"Root.TTFont.STIXSiz3Sym", "STIXSiz3Sym.otf"},
-   {"Root.TTFont.STIXSiz3SymBd", "STIXSiz3SymBol.otf"},
-   {"Root.TTFont.STIXSiz4Sym", "STIXSiz4Sym.otf"},
-   {"Root.TTFont.STIXSiz4SymBd", "STIXSiz4SymBol.otf"},
-   {"Root.TTFont.STIXSiz5Sym", "STIXSiz5Sym.otf"},
-   {"Root.TTFont.ME",      "DroidSansFallback.ttf"},
-   {"Root.TTFont.CJKMing", "DroidSansFallback.ttf"},
-   {"Root.TTFont.CJKGothic", "DroidSansFallback.ttf"}
-};
-
-
-static constexpr int kFontTableSize = sizeof(gFontTable) / sizeof(gFontTable[0]);
-
-// ======================== Static Font Cache =============================
-
-struct FontEntry {
-   int rlFontId = 0;   // font texture id from raylib
-   int baseSize = 0;   // pixel size this font was loaded at
-   std::string path;   // original font file path
-};
-
-Font TRaylibPadPainter::LoadFontForId([[maybe_unused]]Font_t fontnumber)
-{
-   return ::GetFontDefault();
-/*
-
-   int fontid = fontnumber / 10;
-   if (fontid < 0 || fontid >= kFontTableSize)
-      fontid = 0;
-
-   static std::map<int, FontEntry> cache;
-   auto iter = cache.find(fontid);
-   if (iter == cache.end()) {
-      const char *ttpath = gEnv->GetValue("Root.TTFontPath", TROOT::GetTTFFontDir());
-      TString fname = gEnv->GetValue(gFontTable[fontid].envKey, gFontTable[fontid].fontName);
-      const char *ttfont = gSystem->FindFile(ttpath, fname, kReadPermission);
-
-      if (!ttfont) {
-         Error("LoadFontForId",
-               "Not found font %s in configured path %s", fname.Data(), ttpath);
-         return ::GetFontDefault();
-      }
-      cache[fontid] = FontEntry{0, 64, ttfont};
-   }
-
-   auto &entry = cache[fontid];
-   return LoadFontEx(entry.path.c_str(), entry.baseSize, nullptr, 0);
-*/
-}
 
 // ======================== Color Conversion ==============================
 
@@ -537,223 +458,19 @@ void TRaylibPadPainter::DrawPolyMarker(Int_t nPoints, const Float_t *x, const Fl
    drawPolyMarkerImpl<Float_t>(nPoints, x, y, GetAttMarker(), GetRaylibColor(GetAttMarker().GetMarkerColor()));
 }
 
-// =========================== DrawText ===================================
-
-// Helper: convert wchar_t to UTF-8 string
-static std::string WCharToUtf8(const wchar_t *text)
-{
-   std::string utf8;
-   for (const wchar_t *p = text; *p; ++p) {
-      unsigned int cp = *p;
-      if (cp < 0x80) {
-         utf8 += (char)cp;
-      } else if (cp < 0x800) {
-         utf8 += (char)(0xC0 | (cp >> 6));
-         utf8 += (char)(0x80 | (cp & 0x3F));
-      } else {
-         utf8 += (char)(0xE0 | (cp >> 12));
-         utf8 += (char)(0x80 | ((cp >> 6) & 0x3F));
-         utf8 += (char)(0x80 | (cp & 0x3F));
-      }
-   }
-   return utf8;
-}
-
-// Helper: paint text at given pixel position
-void TRaylibPadPainter::PaintTextHelper(int px, int py, const char *text)
-{
-   const TAttText &att = GetAttText();
-   Font font = LoadFontForId(att.GetTextFont());
-   if (font.texture.id == 0)
-      return;
-
-   Float_t textsize = att.GetTextSizePixels(*gPad);
-   Int_t pixelsize = (Int_t)(textsize * kScale + 0.5);
-   if (pixelsize <= 0) pixelsize = 10;
-
-   Color col = GetRaylibColor(att.GetTextColor());
-
-   const float spacing = 1.0f;
-
-   // Measure text for alignment
-   Vector2 textSize = MeasureTextEx(font, text, (float)pixelsize, spacing);
-
-   Int_t txalh = att.GetTextAlign() / 10;
-   Int_t txalv = att.GetTextAlign() % 10;
-
-   float drawX = (float)px;
-   float drawY = (float)py;
-
-   // Horizontal alignment
-   switch (txalh) {
-      case 0: case 1: break;                              // left
-      case 2: drawX -= textSize.x / 2.0f; break;          // center
-      case 3: drawX -= textSize.x; break;                 // right
-   }
-
-   // Vertical alignment
-   switch (txalv) {
-      case 1: drawY -= textSize.y; break;                 // bottom
-      case 2: drawY -= textSize.y / 2.0f; break;          // middle
-      case 3: break;                                      // top
-   }
-
-   float angle = -att.GetTextAngle();
-
-   if (angle == 0.0f) {
-      DrawTextEx(font, text, (Vector2){drawX, drawY}, (float) pixelsize, spacing, col);
-   } else {
-      // Rotated text via DrawTextPro
-      // Rectangle sourceRec = {0, 0, (float)font.texture.width, (float)font.texture.height};
-      Vector2 origin = {0, 0};
-      DrawTextPro(font, text, (Vector2){drawX, drawY}, origin, angle,
-                  (float)pixelsize, spacing, col);
-   }
-
-   UnloadFont(font);
-}
-
-void TRaylibPadPainter::DrawText(Double_t x, Double_t y, const char *text, ETextMode /*mode*/)
-{
-   Int_t px = gPad->XtoAbsPixel(x);
-   Int_t py = gPad->YtoAbsPixel(y);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-void TRaylibPadPainter::DrawText(Double_t x, Double_t y, const wchar_t *text, ETextMode /*mode*/)
-{
-   Int_t px = gPad->XtoAbsPixel(x);
-   Int_t py = gPad->YtoAbsPixel(y);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-void TRaylibPadPainter::DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode /*mode*/)
-{
-   Int_t px = gPad->UtoAbsPixel(u);
-   Int_t py = gPad->VtoAbsPixel(v);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-void TRaylibPadPainter::DrawTextNDC(Double_t u, Double_t v, const wchar_t *text, ETextMode /*mode*/)
-{
-   Int_t px = gPad->UtoAbsPixel(u);
-   Int_t py = gPad->VtoAbsPixel(v);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
-void TRaylibPadPainter::DrawTextUrl(Double_t x, Double_t y, const char *text, const char * /*url*/)
-{
-   Int_t px = gPad->XtoAbsPixel(x);
-   Int_t py = gPad->YtoAbsPixel(y);
-
-   const TAttText &att = GetAttText();
-
-   TTFhandle ttf;
-   ttf.SetTextFont(att.GetTextFont());
-   ttf.SetTextSize(att.GetTextSizePixels(*gPad));
-   ttf.SetRotationMatrix(att.GetTextAngle());
-   ttf.PrepareString(text);
-   ttf.LayoutGlyphs();
-
-   RenderTTF(px, py, ttf);
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 /// Render TTF glyphs on drawable area
 
-void TRaylibPadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
+void TRaylibPadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_unused]] ETextMode mode)
 {
-   const TAttText &att = GetAttText();
+   // left/top corner is provided,
+   // but y pixels in glyph provided in other direction,
+   // therefore one need to move reference point
 
-   Int_t txalh = att.GetTextAlign() / 10;
-   Int_t txalv = att.GetTextAlign() % 10;
+   px += TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
+   py += ttf.GetBox().yMax;
 
-   FT_Vector alignVector;
-
-   Color col = GetRaylibColor(att.GetTextColor());
-
-
-   switch (txalh) {
-      case 2: alignVector.x = ttf.GetWidth() / 2; break; //center
-      case 3: alignVector.x = ttf.GetWidth(); break; //right
-      default: alignVector.x = 0; break; // left
-   }
-
-   switch (txalv) {
-      case 2: alignVector.y = ttf.GetAscent() / 2; break; // middle
-      case 3: alignVector.y = ttf.GetAscent(); break; //top
-      default: alignVector.y = 0; break; //bottom
-   }
-
-   FT_Vector_Transform(&alignVector, ttf.GetRotMatrix());
-   alignVector.x = alignVector.x >> 6;
-   alignVector.y = alignVector.y >> 6;
-
-   Int_t Xoff = TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
-   Int_t Yoff = TMath::Max(0, (Int_t) -ttf.GetBox().yMin);
-   Int_t w    = ttf.GetBox().xMax + Xoff;
-   Int_t h    = ttf.GetBox().yMax + Yoff;
-   Int_t x1   = px - Xoff - alignVector.x;
-   Int_t y1   = py + Yoff + alignVector.y - h;
-
-//   int width = fDrawArea->get_width();
-//   int height = fDrawArea->get_height();
-
-   // If w or h is 0, very likely the string is only blank characters
-   if (w <= 0 || h <= 0)
-      return;
-
-   // If string falls outside window, there is probably no need to draw it.
-//   if (x1 + w <= 0 || x1 >= width || y1 + h <= 0 || y1 >= height)
-//      return;
-
-//   auto ctx = fDrawArea->GetContext();
-
-//   SetGtk4Color(att.GetTextColor());
-
-   x1 += Xoff;
-   y1 += h - Yoff;
-
+   auto col = GetRaylibColor(GetAttText().GetTextColor());
 
    for (UInt_t n = 0; n < ttf.GetNumGlyphs(); n++) {
       if (auto glyph = ttf.GetGlyphBitmap(n)) {
@@ -782,10 +499,7 @@ void TRaylibPadPainter::RenderTTF(Int_t px, Int_t py, TTFhandle &ttf)
          // Upload to GPU memory
          Texture2D texture = LoadTextureFromImage(img);
 
-         Int_t bx = glyph->left;
-         Int_t by = -glyph->top;
-
-         DrawTexture(texture, x1 + bx, y1 + by, col);
+         DrawTexture(texture, px + glyph->left, py - glyph->top, col);
 
          // Always unload transient textures to avoid GPU memory leaks!
          // but we should wait until rendering is finished

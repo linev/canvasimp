@@ -21,14 +21,6 @@
 #include <raylib.h>
 
 
-// Forward declare raylib types to avoid including raylib.h in the header
-// (which would force every consumer to link against raylib)
-struct RLFont;
-
-// forward declaration for TTF handle
-class TTFhandle;
-
-
 namespace ROOT {
 namespace Experimental {
 
@@ -48,17 +40,11 @@ friend class TRaylibCanvas;
 protected:
    // Font cache - maps ROOT font ID to loaded raylib Font
 
-   Font LoadFontForId(Font_t fontnumber);
-
    // Map ROOT color to raylib Color
    static Color GetRaylibColor(Color_t id);
 
-   void PaintTextHelper(int px, int py, const char *text);
-
    // Current global alpha for transparency support
    float GetCurrentAlpha() const;
-
-   void RenderTTF(Int_t px, Int_t py, TTFhandle &ttf);
 
    void CleanupTextures();
 
@@ -109,12 +95,7 @@ public:
    void DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y) override;
    void DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y) override;
 
-   void DrawText(Double_t x, Double_t y, const char *text, ETextMode mode) override;
-   void DrawText(Double_t x, Double_t y, const wchar_t *text, ETextMode mode) override;
-   void DrawTextNDC(Double_t u, Double_t v, const char *text, ETextMode mode) override;
-   void DrawTextNDC(Double_t u, Double_t v, const wchar_t *text, ETextMode mode) override;
-
-   void DrawTextUrl(Double_t x, Double_t y, const char *text, const char *url) override;
+   void DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_unused]] ETextMode mode) override;
 
 private:
    TRaylibPadPainter(const TRaylibPadPainter &) = delete;
