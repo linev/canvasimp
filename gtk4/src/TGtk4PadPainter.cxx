@@ -526,38 +526,34 @@ void TGtk4PadPainter::SaveImage(TVirtualPad * /* pad */, const char * /* fileNam
 ////////////////////////////////////////////////////////////////////////////////
 /// Render TTF glyphs on drawable area
 
-void TGtk4PadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_unused]] ETextMode mode)
+void TGtk4PadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, ETextMode /* mode */)
 {
-   // left/top corner is provided,
-   // but y pixels in glyph provided in other direction,
-   // therefore one need to move reference point
-
-   px += TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
-   py += ttf.GetBox().yMax;
+   // position inside the pad is provided, therefore shift it to global image
+   px += fPad->UtoAbsPixel(0);
+   py += fPad->VtoAbsPixel(1);
 
    auto ctx = fDrawArea->GetContext();
 
    SetGtk4Color(GetAttText().GetTextColor());
 
-   for (UInt_t n = 0; n < ttf.GetNumGlyphs(); n++) {
-      if (auto glyph = ttf.GetGlyphBitmap(n)) {
-         FT_Bitmap &bmp = glyph->bitmap;
+   for (UInt_t nglyph = 0; nglyph < ttf.GetNumGlyphs(); nglyph++) {
+      Int_t bx = 0, by = 0;
+      UChar_t *buffer = nullptr;
+      UInt_t width = 0, rows = 0, pitch = 0;
+      if (!ttf.GetGlyphData(nglyph, bx, by, buffer, width, rows, pitch))
+         continue;
 
-         if (bmp.width == 0 || bmp.rows == 0)
-            continue; // e.g. space
+      // Cairo's A8 surfaces need their own row stride (padding), which
+       // usually differs from FreeType's bmp.pitch - copy row by row
+      auto stride = Cairo::ImageSurface::format_stride_for_width(Cairo::Surface::Format::A8, width);
+      std::vector<unsigned char> data(stride * rows, 0);
 
-         // Cairo's A8 surfaces need their own row stride (padding), which
-         // usually differs from FreeType's bmp.pitch - copy row by row
-         int stride = Cairo::ImageSurface::format_stride_for_width(Cairo::Surface::Format::A8, bmp.width);
-         std::vector<unsigned char> data(stride * bmp.rows, 0);
+      for (unsigned int row = 0; row < rows; ++row)
+         std::memcpy(data.data() + row * stride, buffer + row * pitch, width);
 
-         for (unsigned int row = 0; row < bmp.rows; ++row)
-            std::memcpy(data.data() + row * stride, bmp.buffer + row * bmp.pitch, bmp.width);
+      auto surface =
+         Cairo::ImageSurface::create(data.data(), Cairo::Surface::Format::A8, width, rows, stride);
 
-         auto surface =
-            Cairo::ImageSurface::create(data.data(), Cairo::Surface::Format::A8, bmp.width, bmp.rows, stride);
-
-         ctx->mask(surface, px + glyph->left, py - glyph->top);
-      }
+      ctx->mask(surface, px + bx, py + by);
    }
 }
