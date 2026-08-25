@@ -463,50 +463,45 @@ void TRaylibPadPainter::DrawPolyMarker(Int_t nPoints, const Float_t *x, const Fl
 
 void TRaylibPadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_unused]] ETextMode mode)
 {
-   // left/top corner is provided,
-   // but y pixels in glyph provided in other direction,
-   // therefore one need to move reference point
-
-   px += TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
-   py += ttf.GetBox().yMax;
+   // position inside the pad is provided, therefore shift it to global image
+   px += fPad->UtoAbsPixel(0);
+   py += fPad->VtoAbsPixel(1);
 
    auto col = GetRaylibColor(GetAttText().GetTextColor());
 
-   for (UInt_t n = 0; n < ttf.GetNumGlyphs(); n++) {
-      if (auto glyph = ttf.GetGlyphBitmap(n)) {
-         FT_Bitmap &bitmap = glyph->bitmap;
+   for (UInt_t nglyph = 0; nglyph < ttf.GetNumGlyphs(); nglyph++) {
+      Int_t bx = 0, by = 0;
+      UChar_t *buffer = nullptr;
+      UInt_t width = 0, rows = 0, pitch = 0;
+      if (!ttf.GetGlyphData(nglyph, bx, by, buffer, width, rows, pitch))
+         continue;
 
-         if (bitmap.width == 0 || bitmap.rows == 0)
-            continue; // e.g. space
-
-         std::vector<unsigned char> pixels(bitmap.width * bitmap.rows * 2);
-         for (unsigned int y = 0; y < bitmap.rows; ++y)  {
-            const unsigned char *srcRow = bitmap.buffer + y * bitmap.pitch; // FreeType's own stride
-            for (unsigned int x = 0; x < bitmap.width; ++x) {
-                pixels[(y * bitmap.width + x) * 2 + 0] = 255;       // gray
-                pixels[(y * bitmap.width + x) * 2 + 1] = srcRow[x];  // alpha
-            }
+      std::vector<unsigned char> pixels(width * rows * 2);
+      for (unsigned int y = 0; y < rows; ++y)  {
+         const unsigned char *srcRow = buffer + y * pitch; // FreeType's own stride
+         for (unsigned int x = 0; x < width; ++x) {
+            pixels[(y * width + x) * 2 + 0] = 255;       // gray
+            pixels[(y * width + x) * 2 + 1] = srcRow[x];  // alpha
          }
-
-         Image img = {
-            .data = pixels.data(),
-            .width = (int)bitmap.width,
-            .height = (int)bitmap.rows,
-            .mipmaps = 1,
-            .format = PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA
-         };
-
-         // Upload to GPU memory
-         Texture2D texture = LoadTextureFromImage(img);
-
-         DrawTexture(texture, px + glyph->left, py - glyph->top, col);
-
-         // Always unload transient textures to avoid GPU memory leaks!
-         // but we should wait until rendering is finished
-
-         fTextures.push_back(texture);
-         // UnloadTexture(texture);
       }
+
+      Image img = {
+         .data = pixels.data(),
+         .width = (int)width,
+         .height = (int)rows,
+         .mipmaps = 1,
+         .format = PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA
+      };
+
+      // Upload to GPU memory
+      Texture2D texture = LoadTextureFromImage(img);
+
+      DrawTexture(texture, px + bx, py + by, col);
+
+      // Always unload transient textures to avoid GPU memory leaks!
+      // but we should wait until rendering is finished
+      fTextures.push_back(texture);
+      // UnloadTexture(texture);
    }
 }
 
