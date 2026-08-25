@@ -8,9 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 COMPONENTS Core Widgets REQUIRED)
 
-find_package(Freetype REQUIRED)
-
-
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -55,7 +52,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${ROOT_INCLUDE_DIRS}
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets Freetype::Freetype)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Core Qt6::Widgets)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
