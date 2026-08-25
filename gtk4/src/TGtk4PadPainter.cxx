@@ -20,11 +20,7 @@
 #include "TColor.h"
 #include "RStipples.h"
 
-
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_GLYPH_H
-#include "TTF.h"
+#include "TTFhandle.h"
 
 #include <memory>
 #include <map>
