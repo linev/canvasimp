@@ -457,12 +457,9 @@ QBrush TQt6PadPainter::GetFillBrush()
 
 void TQt6PadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_unused]] ETextMode mode)
 {
-   // left/top corner is provided,
-   // but y pixels in glyph provided in other direction,
-   // therefore one need to move reference point
-
-   px += TMath::Max(0, (Int_t) -ttf.GetBox().xMin);
-   py += ttf.GetBox().yMax;
+   // position inside the pad is provided, therefore shift it to global image
+   px += fPad->UtoAbsPixel(0);
+   py += fPad->VtoAbsPixel(1);
 
    const TAttText &att = GetAttText();
 
@@ -470,32 +467,31 @@ void TQt6PadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_u
 
    auto textColor = GetQColor(att.GetTextColor());
 
-   for (UInt_t n = 0; n < ttf.GetNumGlyphs(); n++) {
-      if (auto glyph = ttf.GetGlyphBitmap(n)) {
-         FT_Bitmap &bmp = glyph->bitmap;
+   for (UInt_t nglyph = 0; nglyph < ttf.GetNumGlyphs(); nglyph++) {
+      Int_t bx = 0, by = 0;
+      UChar_t *buffer = nullptr;
+      UInt_t width = 0, rows = 0, pitch = 0;
+      if (!ttf.GetGlyphData(nglyph, bx, by, buffer, width, rows, pitch))
+         continue;
 
-         if (bmp.width == 0 || bmp.rows == 0)
-            continue; // e.g. space
+      QImage colorFill(width, rows, QImage::Format_ARGB32);
+      colorFill.fill(textColor);
 
-         QImage colorFill(bmp.width, bmp.rows, QImage::Format_ARGB32);
-         colorFill.fill(textColor);
+      QPainter maskPainter(&colorFill);
 
-         QPainter maskPainter(&colorFill);
+      QImage maskImage(
+         buffer,
+         width,
+         rows,
+         pitch,
+         QImage::Format_Alpha8
+      );
 
-         QImage maskImage(
-            bmp.buffer,
-            bmp.width,
-            bmp.rows,
-            bmp.pitch,
-            QImage::Format_Alpha8
-         );
+      maskPainter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+      maskPainter.drawImage(0, 0, maskImage);
+      maskPainter.end();
 
-         maskPainter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-         maskPainter.drawImage(0, 0, maskImage);
-         maskPainter.end();
-
-         painter->drawImage(QPoint(px + glyph->left, py - glyph->top), colorFill);
-      }
+      painter->drawImage(QPoint(px + bx, py + by), colorFill);
    }
 }
 
