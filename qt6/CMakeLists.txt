@@ -26,6 +26,7 @@ set(SOURCES
     src/TQt6Application.cxx
     src/TQt6Canvas.cxx
     src/TQt6PadPainter.cxx
+    src/TQt6GedEditor.cxx
     src/TQt6GuiFactory.cxx
 )
 
@@ -33,6 +34,7 @@ set(HEADERS
     inc/TQt6Application.h
     inc/TQt6Canvas.h
     inc/TQt6PadPainter.h
+    inc/TQt6GedEditor.h
     inc/TQt6GuiFactory.h
 )
 
