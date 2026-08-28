@@ -14,13 +14,17 @@
 #include "TVirtualPadEditor.h"
 #include "TQObject.h"
 
+#include <functional>
+
 class TVirtualPad;
+class QDialog;
+class QFormLayout;
 
 
 namespace ROOT {
 namespace Experimental {
 
-class TQt6GedEditor : public TVirtualPadEditor, public TQObject {
+class TQt6GedEditor : public TVirtualPadEditor, public TObject, public TQObject {
 
    protected:
 
@@ -28,6 +32,15 @@ class TQt6GedEditor : public TVirtualPadEditor, public TQObject {
       TVirtualPad *fPad = nullptr;
       TObject *fModel = nullptr;
       Bool_t fGlobal = kTRUE;
+
+      QDialog *fDialog = nullptr;
+      QFormLayout *fFormLayout = nullptr;
+
+      void FillDialogsElements();
+
+      void ModifiedPad();
+
+      void AddColorElements(int colindx, QFormLayout *layout, std::function<void(int)> callback);
 
    public:
 
@@ -39,13 +52,14 @@ class TQt6GedEditor : public TVirtualPadEditor, public TQObject {
 
       TCanvas* GetCanvas() const override { return fCanvas; }
 
-
       void ConnectToCanvas(TCanvas *c);
       void DisconnectFromCanvas();
       void SetCanvas(TCanvas *c);
 
       void Show() override;
       void Hide() override;
+
+      void RecursiveRemove(TObject* obj) override;
 
       virtual void  SetModel(TVirtualPad* pad, TObject* obj, Int_t event, Bool_t force =kFALSE);
 
