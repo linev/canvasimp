@@ -17,9 +17,14 @@
 #include <functional>
 
 class TVirtualPad;
+class TAttMarker;
+class TAttText;
+class TAttLine;
+class TAttFill;
+class TClass;
+
 class QDialog;
 class QFormLayout;
-class QVBoxLayout;
 
 
 namespace ROOT {
@@ -45,6 +50,8 @@ class TQt6GedEditor : public TVirtualPadEditor, public TObject, public TQObject 
 
       void AddColorElements(int colindx, QFormLayout *layout, std::function<void(int)> callback);
 
+      void FillGed(TClass *cl);
+
    public:
 
       TQt6GedEditor(TCanvas *c = nullptr);
@@ -65,6 +72,12 @@ class TQt6GedEditor : public TVirtualPadEditor, public TObject, public TQObject 
       void RecursiveRemove(TObject* obj) override;
 
       virtual void  SetModel(TVirtualPad* pad, TObject* obj, Int_t event, Bool_t force =kFALSE);
+
+      // specific editors
+      void AddTAttLine(TAttLine *);
+      void AddTAttFill(TAttFill *);
+      void AddTAttText(TAttText *);
+      void AddTAttMarker(TAttMarker *);
 
    ClassDefOverride(TQt6GedEditor, 0) // Implementation for Ged Editor with Qt6
 };

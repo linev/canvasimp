@@ -13,9 +13,18 @@
 #include "TCanvas.h"
 #include "TROOT.h"
 #include "TColor.h"
-#include "TAttMarker.h"
 #include "TQt6Canvas.h"
 #include "QCanvasWidget.h"
+
+#include "TClass.h"
+#include "TBaseClass.h"
+#include "TMethod.h"
+#include "TMethodCall.h"
+
+#include "TAttMarker.h"
+#include "TAttLine.h"
+#include "TAttFill.h"
+#include "TAttText.h"
 
 #include <QDialog>
 #include <QVBoxLayout>
@@ -250,6 +259,92 @@ void TQt6GedEditor::ModifiedPad()
       pad->ModifiedUpdate();
 }
 
+void TQt6GedEditor::AddTAttLine(TAttLine *attline)
+{
+   AddHLine(fFormLayout, "TAttLine");
+
+   AddColorElements(attline->GetLineColor(), fFormLayout, [attline, this](int colindx) {
+      attline->SetLineColor(colindx);
+      ModifiedPad();
+   });
+
+}
+
+void TQt6GedEditor::AddTAttFill(TAttFill *)
+{
+   AddHLine(fFormLayout, "TAttFill");
+
+}
+
+void TQt6GedEditor::AddTAttText(TAttText *)
+{
+   AddHLine(fFormLayout, "TAttText");
+
+}
+
+
+
+void TQt6GedEditor::AddTAttMarker(TAttMarker *attmarker)
+{
+   AddHLine(fFormLayout, "TAttMarker");
+
+   AddColorElements(attmarker->GetMarkerColor(), fFormLayout, [attmarker, this](int colindx) {
+      attmarker->SetMarkerColor(colindx);
+      ModifiedPad();
+   });
+
+   QComboBox *styleCombo = new QComboBox();
+   for (int s = 1; s <= 49; ++s)
+      styleCombo->addItem(QString("Style %1").arg(s), s);
+
+   // Find and set current style
+   int currentStyle = attmarker->GetMarkerStyle();
+   int styleIdx = styleCombo->findData(currentStyle);
+   if (styleIdx != -1)
+      styleCombo->setCurrentIndex(styleIdx);
+   else
+      styleCombo->addItem(QString("Style %1").arg(currentStyle), currentStyle);
+
+   QObject::connect(styleCombo, &QComboBox::currentIndexChanged, [this, attmarker](int indx) {
+      attmarker->SetMarkerStyle(indx + 1);
+      ModifiedPad();
+   });
+
+   fFormLayout->addRow("Style:", styleCombo);
+
+   QDoubleSpinBox *floatSpinBox = new QDoubleSpinBox();
+   floatSpinBox->setRange(0.0, 100.0); // Set your minimum and maximum limits
+   floatSpinBox->setSingleStep(1);     // Set step size to 1
+   floatSpinBox->setDecimals(1);       // Force it to show exactly 1 decimal place (e.g., 1.5)
+   floatSpinBox->setValue(attmarker->GetMarkerSize());
+   fFormLayout->addRow("Size:", floatSpinBox);
+
+   QObject::connect(floatSpinBox, &QDoubleSpinBox::valueChanged, [this, attmarker](double v) {
+      attmarker->SetMarkerSize(v);
+      ModifiedPad();
+   });
+}
+
+void TQt6GedEditor::FillGed(TClass *cl)
+{
+   TString method_name = TString::Format("Add%s", cl->GetName());
+
+   auto mtd = IsA()->GetMethodAny(method_name.Data());
+
+   if (mtd) {
+      void *obj = fModel->IsA()->DynamicCast(cl, fModel);
+      auto sarg = TString::Format("(%s*)0x%zx", cl->GetName(), (size_t)obj);
+      TMethodCall call(IsA(), method_name, sarg.Data());
+      call.Execute(this);
+   }
+
+   auto lst = cl->GetListOfBases();
+
+   TIter iter(lst);
+   while (auto base = (TBaseClass*) iter())
+      FillGed(base->GetClassPointer());
+}
+
 
 void TQt6GedEditor::FillDialogsElements()
 {
@@ -267,46 +362,11 @@ void TQt6GedEditor::FillDialogsElements()
       delete item; // Deletes the layout item wrapper
    }
 
-   auto attmarker = dynamic_cast<TAttMarker *>(fModel);
-   if (attmarker) {
-      AddHLine(fFormLayout, "TAttMarker");
+   FillGed(fModel->IsA());
 
-      AddColorElements(attmarker->GetMarkerColor(), fFormLayout, [attmarker, this](int colindx) {
-         attmarker->SetMarkerColor(colindx);
-         ModifiedPad();
-      });
-
-      QComboBox *styleCombo = new QComboBox();
-      for (int s = 1; s <= 49; ++s)
-         styleCombo->addItem(QString("Style %1").arg(s), s);
-
-      // Find and set current style
-      int currentStyle = attmarker->GetMarkerStyle();
-      int styleIdx = styleCombo->findData(currentStyle);
-      if (styleIdx != -1)
-         styleCombo->setCurrentIndex(styleIdx);
-      else
-         styleCombo->addItem(QString("Style %1").arg(currentStyle), currentStyle);
-
-      QObject::connect(styleCombo, &QComboBox::currentIndexChanged, [this, attmarker](int indx) {
-         attmarker->SetMarkerStyle(indx + 1);
-         ModifiedPad();
-      });
-
-      fFormLayout->addRow("Style:", styleCombo);
-
-      QDoubleSpinBox *floatSpinBox = new QDoubleSpinBox();
-      floatSpinBox->setRange(0.0, 100.0); // Set your minimum and maximum limits
-      floatSpinBox->setSingleStep(1);  // Set step size to 1
-      floatSpinBox->setDecimals(1);      // Force it to show exactly 1 decimal place (e.g., 1.5)
-      floatSpinBox->setValue(attmarker->GetMarkerSize());
-      fFormLayout->addRow("Size:", floatSpinBox);
-
-      QObject::connect(floatSpinBox, &QDoubleSpinBox::valueChanged, [this, attmarker](double v) {
-        attmarker->SetMarkerSize(v);
-        ModifiedPad();
-      });
-   }
+//   auto attmarker = dynamic_cast<TAttMarker *>(fModel);
+//   if (attmarker)
+//      AddTAttMarker(attmarker);
 }
 
 void TQt6GedEditor::Hide()
