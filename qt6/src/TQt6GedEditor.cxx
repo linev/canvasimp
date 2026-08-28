@@ -29,6 +29,8 @@
 #include <QDoubleSpinBox>
 #include <QGroupBox>
 
+#include <memory>
+
 using namespace ROOT::Experimental;
 
 /** \class TQt6GedEditor
@@ -180,8 +182,6 @@ void TQt6GedEditor::AddHLine(QFormLayout *f, const char *lbl)
    f->addRow(container);
 }
 
-
-
 void TQt6GedEditor::AddColorElements(int colindx, QFormLayout *layout, std::function<void(int)> callback)
 {
    TColor *rootColor = gROOT->GetColor(colindx);
@@ -201,8 +201,8 @@ void TQt6GedEditor::AddColorElements(int colindx, QFormLayout *layout, std::func
    alphaSlider->setRange(0, 255);
    alphaSlider->setValue(initialAlpha255);
 
-   // Visual preview of current color
-   auto selectedColor = new QColor(initialColor);
+   // instance will be deleted when last lambda is removed
+   auto selectedColor = std::make_shared<QColor>(initialColor);
 
    auto updateColorElements = [colorButton, selectedColor, callback]() {
       QString qss = QString("background-color: rgba(%1, %2, %3, %4); border: 1px solid gray;")
@@ -296,8 +296,6 @@ void TQt6GedEditor::FillDialogsElements()
       fFormLayout->addRow("Style:", styleCombo);
 
       QDoubleSpinBox *floatSpinBox = new QDoubleSpinBox();
-
-      // 2. Configure its ranges and step parameters
       floatSpinBox->setRange(0.0, 100.0); // Set your minimum and maximum limits
       floatSpinBox->setSingleStep(1);  // Set step size to 1
       floatSpinBox->setDecimals(1);      // Force it to show exactly 1 decimal place (e.g., 1.5)
