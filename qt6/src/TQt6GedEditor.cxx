@@ -14,6 +14,8 @@
 #include "TROOT.h"
 #include "TColor.h"
 #include "TAttMarker.h"
+#include "TQt6Canvas.h"
+#include "QCanvasWidget.h"
 
 #include <QDialog>
 #include <QVBoxLayout>
@@ -25,7 +27,7 @@
 #include <QLabel>
 #include <QColorDialog>
 #include <QDoubleSpinBox>
-
+#include <QGroupBox>
 
 using namespace ROOT::Experimental;
 
@@ -115,11 +117,18 @@ void TQt6GedEditor::Show()
 
    fDialog = new QDialog;
    fDialog->setWindowTitle("Edit Attributes");
-   fDialog->setModal(true);
+   fDialog->setModal(false);
+
+   auto imp = dynamic_cast<TQt6Canvas *>(fCanvas->GetCanvasImp());
+   if (imp) {
+     auto widget = imp->GetCanvasWidget();
+     fDialog->resize(200, widget->height());
+     QPoint pos = widget->mapToGlobal(QPoint(0, 0));
+     fDialog->move(pos.x() - fDialog->width(), pos.y());
+   }
 
    auto mainLayout = new QVBoxLayout(fDialog);
    fFormLayout = new QFormLayout();
-
 
    mainLayout->addLayout(fFormLayout);
 
@@ -149,6 +158,28 @@ void TQt6GedEditor::Show()
 
    fDialog->show();
 }
+
+void TQt6GedEditor::AddHLine(QFormLayout *f, const char *lbl)
+{
+   QWidget *container = new QWidget(fDialog);
+   QHBoxLayout *layout = new QHBoxLayout(container);
+   layout->setContentsMargins(0, 5, 0, 5);
+
+   QFrame *leftLine = new QFrame(fDialog);
+   leftLine->setFrameShape(QFrame::HLine);
+
+   QLabel *label = new QLabel(lbl, fDialog);
+
+   QFrame *rightLine = new QFrame(fDialog);
+   rightLine->setFrameShape(QFrame::HLine);
+
+   layout->addWidget(leftLine, 1);  // Stretch factor 1
+   layout->addWidget(label, 0);     // Fits content tightly
+   layout->addWidget(rightLine, 4); // Stret
+
+   f->addRow(container);
+}
+
 
 
 void TQt6GedEditor::AddColorElements(int colindx, QFormLayout *layout, std::function<void(int)> callback)
@@ -238,6 +269,8 @@ void TQt6GedEditor::FillDialogsElements()
 
    auto attmarker = dynamic_cast<TAttMarker *>(fModel);
    if (attmarker) {
+      AddHLine(fFormLayout, "TAttMarker");
+
       AddColorElements(attmarker->GetMarkerColor(), fFormLayout, [attmarker, this](int colindx) {
          attmarker->SetMarkerColor(colindx);
          ModifiedPad();

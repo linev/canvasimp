@@ -19,6 +19,7 @@
 class TVirtualPad;
 class QDialog;
 class QFormLayout;
+class QVBoxLayout;
 
 
 namespace ROOT {
@@ -39,6 +40,8 @@ class TQt6GedEditor : public TVirtualPadEditor, public TObject, public TQObject 
       void FillDialogsElements();
 
       void ModifiedPad();
+
+      void AddHLine(QFormLayout *f, const char *lbl);
 
       void AddColorElements(int colindx, QFormLayout *layout, std::function<void(int)> callback);
 
