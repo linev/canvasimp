@@ -203,7 +203,7 @@ void TQt6GedEditor::AddColorElements(int colindx, QFormLayout *layout, std::func
    }
    initialColor.setAlpha(initialAlpha255);
 
-   auto colorButton = new QPushButton();
+   auto colorButton = new QPushButton(fDialog);
    colorButton->setFixedWidth(80);
 
    QSlider *alphaSlider = new QSlider(Qt::Horizontal);
@@ -268,18 +268,209 @@ void TQt6GedEditor::AddTAttLine(TAttLine *attline)
       ModifiedPad();
    });
 
+   QComboBox *styleCombo = new QComboBox();
+   styleCombo->addItem("None (0)", 0);
+   styleCombo->addItem("Solid (1)", 1);
+   styleCombo->addItem("Dashed (2)", 2);
+   styleCombo->addItem("Dotted (3)", 3);
+   styleCombo->addItem("Dash-Dot (4)", 4);
+   styleCombo->addItem("Dash-Dot (5)", 5);
+   styleCombo->addItem("Dash-Dot-Dot-Dot (6)", 6);
+   styleCombo->addItem("Dashed medium (7)", 7);
+   styleCombo->addItem("Dash-Dot-Dot (8)", 8);
+   styleCombo->addItem("Dashed long (9)", 9);
+   styleCombo->addItem("Dash-Dot long (10)", 10);
+
+   // Find and set current style
+   int currentStyle = attline->GetLineStyle();
+   int styleIdx = styleCombo->findData(currentStyle);
+   if (styleIdx != -1)
+      styleCombo->setCurrentIndex(styleIdx);
+   else
+      styleCombo->addItem(QString("Custom (%1)").arg(currentStyle), currentStyle);
+
+    QObject::connect(styleCombo, &QComboBox::currentIndexChanged, [this, attline, styleCombo](int) {
+      attline->SetLineStyle(styleCombo->currentData().toInt());
+      ModifiedPad();
+   });
+
+   fFormLayout->addRow("Style:", styleCombo);
+
+   QSpinBox *widthSpin = new QSpinBox();
+   widthSpin->setRange(1, 20);
+   widthSpin->setValue(attline->GetLineWidth());
+
+   QObject::connect(widthSpin, &QSpinBox::valueChanged, [this, attline](int v) {
+      attline->SetLineWidth(v);
+      ModifiedPad();
+   });
+
+   fFormLayout->addRow("Width:", widthSpin);
 }
 
-void TQt6GedEditor::AddTAttFill(TAttFill *)
+void TQt6GedEditor::AddTAttFill(TAttFill *attfill)
 {
    AddHLine(fFormLayout, "TAttFill");
 
+   AddColorElements(attfill->GetFillColor(), fFormLayout, [attfill, this](int colindx) {
+      attfill->SetFillColor(colindx);
+      ModifiedPad();
+   });
+
+   QComboBox *styleCombo = new QComboBox();
+   styleCombo->addItem("None (0)", 0);
+   styleCombo->addItem("Solid (1001)", 1001);
+   for (int s = 3001; s <= 3025; ++s)
+      styleCombo->addItem(QString("Style %1").arg(s), s);
+   for (int s = 3144; s <= 3944; s += 100)
+      styleCombo->addItem(QString("Style %1").arg(s), s);
+   for (int s = 3305; s <= 3395; s += 10)
+      styleCombo->addItem(QString("Style %1").arg(s), s);
+   for (int s = 3350; s <= 3359; s += 1)
+      styleCombo->addItem(QString("Style %1").arg(s), s);
+   for (int s = 3409; s <= 3490; s += 9)
+      styleCombo->addItem(QString("Style %1").arg(s), s);
+   for (int s = 3609; s <= 3690; s += 9)
+      styleCombo->addItem(QString("Style %1").arg(s), s);
+
+   // Find and set current style
+   int currentStyle = attfill->GetFillStyle();
+   int styleIdx = styleCombo->findData(currentStyle);
+   if (styleIdx != -1)
+      styleCombo->setCurrentIndex(styleIdx);
+   else
+      styleCombo->addItem(QString("Style %1").arg(currentStyle), currentStyle);
+
+   QObject::connect(styleCombo, &QComboBox::currentIndexChanged, [this, attfill, styleCombo](int) {
+      attfill->SetFillStyle(styleCombo->currentData().toInt());
+      ModifiedPad();
+   });
+
+   fFormLayout->addRow("Style:", styleCombo);
 }
 
-void TQt6GedEditor::AddTAttText(TAttText *)
+
+class CustomDoubleSpinBox : public QDoubleSpinBox {
+protected:
+    QString textFromValue(double value) const override {
+        if (value == 0) return "Default";
+        return QDoubleSpinBox::textFromValue(value);
+    }
+
+    double valueFromText(const QString &text) const override {
+        if (text == "Default") return 0.;
+        return QDoubleSpinBox::valueFromText(text);
+    }
+};
+
+class CustomSpinBox : public QSpinBox {
+protected:
+    QString textFromValue(int value) const override {
+        if (value == 0) return "Default";
+        return QSpinBox::textFromValue(value);
+    }
+
+    int valueFromText(const QString &text) const override {
+        if (text == "Default") return 0;
+        return QSpinBox::valueFromText(text);
+    }
+};
+
+
+void TQt6GedEditor::AddTAttText(TAttText *atttext)
 {
    AddHLine(fFormLayout, "TAttText");
 
+   AddColorElements(atttext->GetTextColor(), fFormLayout, [atttext, this](int colindx) {
+      atttext->SetTextColor(colindx);
+      ModifiedPad();
+   });
+
+   QComboBox *fontCombo = new QComboBox();
+   fontCombo->addItem("1. Times italic", 1);
+   fontCombo->addItem("2. Times bold", 2);
+   fontCombo->addItem("3. Times bold italic", 3);
+   fontCombo->addItem("4. Helvetica", 4);
+   fontCombo->addItem("5. Helvetica italic", 5);
+   fontCombo->addItem("6. Helvetica bold", 6);
+   fontCombo->addItem("7. Helvetica bold italic", 7);
+   fontCombo->addItem("8. Courier", 8);
+   fontCombo->addItem("9. Courier italic", 9);
+   fontCombo->addItem("10. Courier bold", 10);
+   fontCombo->addItem("11. Courier bold italic", 11);
+   fontCombo->addItem("12. Symbol", 12);
+   fontCombo->addItem("13. Times", 13);
+   fontCombo->addItem("14. Wingdings", 14);
+   fontCombo->addItem("15. Symbol italic", 15);
+
+   // Find and set current style
+   int currentPrec = atttext->GetTextFont() % 10;
+   int currentFont = atttext->GetTextFont() / 10;
+   int styleIdx = fontCombo->findData(currentFont);
+   if (styleIdx >= 0)
+      fontCombo->setCurrentIndex(styleIdx);
+   else
+      fontCombo->addItem(QString("Font %1").arg(currentFont), currentFont);
+
+   QObject::connect(fontCombo, &QComboBox::currentIndexChanged, [this, atttext, fontCombo, currentPrec](int) {
+      atttext->SetTextFont(fontCombo->currentData().toInt() * 10 + currentPrec);
+      ModifiedPad();
+   });
+
+   fFormLayout->addRow("Font:", fontCombo);
+
+   QDoubleSpinBox* floatSpinBox = nullptr;
+   QSpinBox *intSpinBox = nullptr;
+
+   if (currentPrec == 2) {
+      auto floatSpinBox = new CustomDoubleSpinBox();
+      floatSpinBox->setRange(0.0, 1.0);   // Set your minimum and maximum limits
+      floatSpinBox->setSingleStep(0.01);   // Set step size to 00.1
+      floatSpinBox->setDecimals(3);        // Force it to show exactly 3 decimal places
+      floatSpinBox->setValue(atttext->GetTextSize());
+
+      QObject::connect(floatSpinBox, &QDoubleSpinBox::valueChanged, [this, atttext](double v) {
+         atttext->SetTextSize(v);
+         ModifiedPad();
+      });
+      fFormLayout->addRow("Size:", floatSpinBox);
+
+   } else {
+      auto intSpinBox = new CustomSpinBox();
+      intSpinBox->setRange(0, 128);
+      intSpinBox->setValue(atttext->GetTextSize());
+
+      QObject::connect(intSpinBox, &QSpinBox::valueChanged, [this, atttext](int v) {
+         atttext->SetTextSize(v);
+         ModifiedPad();
+      });
+
+      fFormLayout->addRow("Size:", intSpinBox);
+   }
+
+   QComboBox *alignCombo = new QComboBox();
+   alignCombo->addItem("11. Left Bottom", 11);
+   alignCombo->addItem("12. Left Center", 12);
+   alignCombo->addItem("13. Left Top", 13);
+   alignCombo->addItem("21. Middle Bottom", 21);
+   alignCombo->addItem("22. Middle Center", 22);
+   alignCombo->addItem("23. Middle Top", 23);
+   alignCombo->addItem("31. Right Bottom", 31);
+   alignCombo->addItem("32. Right Center", 32);
+   alignCombo->addItem("33. Right Top", 33);
+
+   // Find and set current style
+   int alignIdx = alignCombo->findData(atttext->GetTextAlign());
+   if (alignIdx < 0)
+      alignIdx = alignCombo->findData(11);
+   alignCombo->setCurrentIndex(alignIdx);
+
+   QObject::connect(alignCombo, &QComboBox::currentIndexChanged, [this, atttext, alignCombo](int) {
+      atttext->SetTextAlign(alignCombo->currentData().toInt());
+      ModifiedPad();
+   });
+
+   fFormLayout->addRow("Align:", alignCombo);
 }
 
 
@@ -305,8 +496,8 @@ void TQt6GedEditor::AddTAttMarker(TAttMarker *attmarker)
    else
       styleCombo->addItem(QString("Style %1").arg(currentStyle), currentStyle);
 
-   QObject::connect(styleCombo, &QComboBox::currentIndexChanged, [this, attmarker](int indx) {
-      attmarker->SetMarkerStyle(indx + 1);
+   QObject::connect(styleCombo, &QComboBox::currentIndexChanged, [this, attmarker, styleCombo](int) {
+      attmarker->SetMarkerStyle(styleCombo->currentData().toInt());
       ModifiedPad();
    });
 
