@@ -93,6 +93,8 @@ public:
 
    void     DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[maybe_unused]] ETextMode mode) override;
 
+   void     DrawImage(TImage *img, Int_t x, Int_t y, Int_t flags = 0) override;
+
 private:
    //Let's make this clear:
    TQt6PadPainter(const TQt6PadPainter &rhs) = delete;
