@@ -19,9 +19,8 @@
 #include "TPoint.h"
 #include "TROOT.h"
 #include "TColor.h"
-
-#include "RStipples.h"
 #include "TTFhandle.h"
+#include "TImage.h"
 
 
 #include <raylib.h>
@@ -500,6 +499,57 @@ void TRaylibPadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, [[mayb
       // UnloadTexture(texture);
    }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+/// Render image on drawable area
+
+void TRaylibPadPainter::DrawImage(TImage *img, Int_t px, Int_t py, Int_t)
+{
+   px += fPad->UtoAbsPixel(0);
+   py += fPad->VtoAbsPixel(1);
+
+   auto width = img->GetWidth();
+   auto height = img->GetHeight();
+   auto argbBuffer = (unsigned char*) img->GetArgbArray();
+
+   int pixelCount = width * height;
+
+   std::vector<unsigned char> rgbaData(pixelCount * 4);
+
+   // Convert ARGB/BGRA to RGBA in-memory
+   for (int i = 0; i < pixelCount; i++) {
+      int srcIdx = i * 4;
+      int dstIdx = i * 4;
+
+      // Assuming source is Cairo's Little-Endian BGRA format [B, G, R, A]:
+      rgbaData[dstIdx + 0] = argbBuffer[srcIdx + 2]; // Red
+      rgbaData[dstIdx + 1] = argbBuffer[srcIdx + 1]; // Green
+      rgbaData[dstIdx + 2] = argbBuffer[srcIdx + 0]; // Blue
+      rgbaData[dstIdx + 3] = argbBuffer[srcIdx + 3]; // Alpha
+   }
+
+   Image rayimg = {
+      .data = rgbaData.data(),
+      .width = (int)width,
+      .height = (int)height,
+      .mipmaps = 1,
+      .format =PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+   };
+
+   // Upload to GPU memory
+   Texture2D texture = LoadTextureFromImage(rayimg);
+
+   DrawTexture(texture, px, py, WHITE);
+
+   // Always unload transient textures to avoid GPU memory leaks!
+   // but we should wait until rendering is finished
+   fTextures.push_back(texture);
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// Cleanup context
 
 void TRaylibPadPainter::CleanupTextures()
 {
