@@ -81,7 +81,9 @@ public:
    void     DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y) override;
    void     DrawPolyMarker(Int_t n, const Float_t *x, const Float_t *y) override;
 
-   void   DrawTTFglyphs(Int_t x, Int_t y, TTFhandle &ttf, ETextMode mode) override;
+   void     DrawTTFglyphs(Int_t x, Int_t y, TTFhandle &ttf, ETextMode mode) override;
+
+   void     DrawImage(TImage *img, Int_t x, Int_t y, Int_t flags = 0) override;
 
    Bool_t   IsSupportAlpha() const override { return kTRUE; }
 
