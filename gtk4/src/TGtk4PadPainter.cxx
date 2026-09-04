@@ -19,8 +19,8 @@
 #include "TROOT.h"
 #include "TColor.h"
 #include "RStipples.h"
-
 #include "TTFhandle.h"
+#include "TImage.h"
 
 #include <memory>
 #include <map>
@@ -28,6 +28,7 @@
 #include "Gtk4DrawArea.h"
 
 #include <cairomm/context.h>
+#include <cairomm/surface.h>
 #include <cairo.h>
 
 
@@ -552,4 +553,35 @@ void TGtk4PadPainter::DrawTTFglyphs(Int_t px, Int_t py, TTFhandle &ttf, ETextMod
 
       ctx->mask(surface, px + bx, py + by);
    }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// Render TTF glyphs on drawable area
+
+void TGtk4PadPainter::DrawImage(TImage *img, Int_t px, Int_t py, Int_t)
+{
+   // position inside the pad is provided, therefore shift it to global image
+   px += fPad->UtoAbsPixel(0);
+   py += fPad->VtoAbsPixel(1);
+
+   auto width = img->GetWidth();
+   auto height = img->GetHeight();
+   auto argbBuffer = (unsigned char*) img->GetArgbArray();
+
+   auto ctx = fDrawArea->GetContext();
+
+   int stride = Cairo::ImageSurface::format_stride_for_width(Cairo::Surface::Format::ARGB32, width);
+
+    // 2. Wrap your raw memory pointer into a Cairo Surface.
+    // This borrows the memory pointer without making a deep copy.
+    Cairo::RefPtr<Cairo::ImageSurface> surface =
+        Cairo::ImageSurface::create(argbBuffer, Cairo::Surface::Format::ARGB32, width, height, stride);
+
+    // 3. Set the surface as the source pattern in the context
+    // (0, 0) specifies the top-left offset to place the image
+    ctx->set_source(surface, px, py);
+
+    // 4. Paint the pattern onto the context canvas
+    ctx->paint();
 }
