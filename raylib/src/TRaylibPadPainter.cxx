@@ -79,35 +79,6 @@ void TRaylibPadPainter::SetOpacity(Int_t percent)
    // EnableBlendMode(BLEND_ALPHA);
 }
 
-// ============================ Cursor ====================================
-
-void TRaylibPadPainter::SetCursor(Int_t, ECursor cursor)
-{
-   MouseCursor rlCursor = MOUSE_CURSOR_ARROW;
-   switch (cursor) {
-      case kBottomLeft:   rlCursor = MOUSE_CURSOR_RESIZE_ALL; break;
-      case kBottomRight:  rlCursor = MOUSE_CURSOR_RESIZE_ALL; break;
-      case kTopLeft:      rlCursor = MOUSE_CURSOR_RESIZE_ALL; break;
-      case kTopRight:     rlCursor = MOUSE_CURSOR_RESIZE_ALL; break;
-      case kBottomSide:   rlCursor = MOUSE_CURSOR_RESIZE_NS; break;
-      case kLeftSide:     rlCursor = MOUSE_CURSOR_RESIZE_EW; break;
-      case kTopSide:      rlCursor = MOUSE_CURSOR_RESIZE_NS; break;
-      case kRightSide:    rlCursor = MOUSE_CURSOR_RESIZE_EW; break;
-      case kMove:         rlCursor = MOUSE_CURSOR_POINTING_HAND; break;
-      case kCross:        rlCursor = MOUSE_CURSOR_CROSSHAIR; break;
-      case kArrowHor:     rlCursor = MOUSE_CURSOR_RESIZE_EW; break;
-      case kArrowVer:     rlCursor = MOUSE_CURSOR_RESIZE_NS; break;
-      case kHand:         rlCursor = MOUSE_CURSOR_POINTING_HAND; break;
-      case kRotate:       rlCursor = MOUSE_CURSOR_POINTING_HAND; break;
-      case kPointer:      rlCursor = MOUSE_CURSOR_ARROW; break;
-      case kArrowRight:   rlCursor = MOUSE_CURSOR_RESIZE_EW; break;
-      case kCaret:        rlCursor = MOUSE_CURSOR_IBEAM; break;
-      case kWatch:        rlCursor = MOUSE_CURSOR_ARROW; break;
-      case kNoDrop:       rlCursor = MOUSE_CURSOR_NOT_ALLOWED; break;
-      default:            rlCursor = MOUSE_CURSOR_ARROW; break;
-   }
-   SetMouseCursor(rlCursor);
-}
 
 // ========================== SaveImage ===================================
 

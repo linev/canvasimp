@@ -161,6 +161,40 @@ void TGtk4Canvas::SetCanvasSize(UInt_t cw, UInt_t ch)
    }
 }
 
+//////////////////////////////////////////////////////////////////////////
+/// Set cursor
+
+void TGtk4Canvas::SetCursor(ECursor cursor)
+{
+   const char *id = nullptr;
+   switch(cursor) {
+      case kBottomLeft: id = "sw-resize"; break;
+      case kBottomRight: id = "se-resize"; break;
+      case kTopLeft: id = "nw-resize"; break;
+      case kTopRight: id = "ne-resize"; break;
+      case kBottomSide: id = "s-resize"; break;
+      case kLeftSide: id = "w-resize"; break;
+      case kTopSide: id = "n-resize"; break;
+      case kRightSide: id = "r-resize"; break;
+      case kMove: id = "move"; break;
+      case kCross: id = "crosshair"; break;
+      case kArrowHor: id = "ns-resize"; break;
+      case kArrowVer: id = "ew-resize"; break;
+      case kHand: id = "grab"; break;
+      case kRotate: id = "grab"; break;
+      case kPointer: id = "pointer"; break;
+      case kArrowRight: id = "ew-resize"; break;
+      case kCaret: id = "text"; break;
+      case kWatch: id = "wait"; break;
+      case kNoDrop: id = "no-drop"; break;
+      default: id = "default"; break;
+   }
+   if (id && fDrawArea)
+      fDrawArea->set_cursor(id);
+}
+
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 /// Iconify browser window
 

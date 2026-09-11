@@ -69,9 +69,6 @@ public:
    void SelectDrawable(Int_t) override {}
    void SetDoubleBuffer(Int_t /* device */, Int_t /* mode */) override {}
 
-   // Cursor
-   void SetCursor(Int_t, ECursor) override;
-
    // Image save
    void SaveImage(TVirtualPad *, const char *, Int_t) const override;
 
