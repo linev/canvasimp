@@ -17,10 +17,10 @@
    - context menu
 
 3. raylib-based canvas
-  - complete graphics
-  - TTF fonts
-  - bugy canvas menu
+   - complete graphics
+   - TTF fonts
+   - bugy canvas menu
 
 4. Vulkan-based canv
-  - AI generated
-  - not working :(
+   - AI generated
+   - not working :(
