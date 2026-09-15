@@ -244,12 +244,25 @@ void TRaylibCanvas::RaiseWindow()
    }
 }
 
-// ─── Perform Update (called from TCanvas::Update) ─────────────────────
 
+bool IsAnyModified(TPad *pad)
+{
+   if (!pad)
+      return kFALSE;
+   if (pad->IsModified())
+      return kTRUE;
+   TIter next(pad->GetListOfPrimitives());
+   while (auto obj = next())
+      if (IsAnyModified(dynamic_cast<TPad*>(obj)))
+         return kTRUE;
+   return kFALSE;
+}
+
+// ─── Perform Update (called from TCanvas::Update) ─────────────────────
 
 Bool_t TRaylibCanvas::PerformUpdate(Bool_t /*async*/)
 {
-   if (!Canvas() || !Canvas()->IsModified() || !IsWindowReady() || !hasPersistentCanvas)
+   if (!IsAnyModified(Canvas()) || !IsWindowReady() || !hasPersistentCanvas)
       return kFALSE;
 
    // One can make painting directly
