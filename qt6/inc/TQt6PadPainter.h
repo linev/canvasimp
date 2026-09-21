@@ -13,6 +13,9 @@
 
 #include "TPadPainterBase.h"
 
+// Hide Qt classes from CLING -
+// It not able correctly parse them without some extra defines and include paths
+
 #ifdef __CLING__
 class QString;
 class QColor;

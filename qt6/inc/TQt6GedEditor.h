@@ -71,7 +71,7 @@ class TQt6GedEditor : public TVirtualPadEditor, public TObject, public TQObject 
 
       void RecursiveRemove(TObject* obj) override;
 
-      virtual void  SetModel(TVirtualPad* pad, TObject* obj, Int_t event, Bool_t force =kFALSE);
+      virtual void SetModel(TVirtualPad* pad, TObject* obj, Int_t event);
 
       // specific editors
       void AddTAttLine(TAttLine *);

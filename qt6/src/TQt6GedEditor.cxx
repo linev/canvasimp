@@ -79,9 +79,8 @@ void TQt6GedEditor::SetCanvas(TCanvas *newcan)
 
 void TQt6GedEditor::ConnectToCanvas(TCanvas *c)
 {
-   printf("Connect to canvas %p\n", c);
-   c->Connect("Selected(TVirtualPad*,TObject*,Int_t)", "ROOT::Experimental::TQt6GedEditor",
-              this, "SetModel(TVirtualPad*,TObject*,Int_t)");
+   c->Connect("Selected(TVirtualPad*,TObject*,Int_t)", "ROOT::Experimental::TQt6GedEditor", this,
+              "SetModel(TVirtualPad*,TObject*,Int_t)");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -96,7 +95,7 @@ void TQt6GedEditor::DisconnectFromCanvas()
 ////////////////////////////////////////////////////////////////////////////////
 /// Activate object editors according to the selected object.
 
-void TQt6GedEditor::SetModel(TVirtualPad* pad, TObject* obj, Int_t event, Bool_t force)
+void TQt6GedEditor::SetModel(TVirtualPad* pad, TObject* obj, Int_t event)
 {
    if (event != kButton1Down)
       return;
@@ -105,8 +104,6 @@ void TQt6GedEditor::SetModel(TVirtualPad* pad, TObject* obj, Int_t event, Bool_t
 
    fPad = pad;
    fModel = obj ? obj : pad;
-
-   printf("SetModel %p %s\n", fModel, fModel->ClassName());
 
    if (fModel != prev)
       FillDialogsElements();
@@ -119,8 +116,6 @@ void TQt6GedEditor::Show()
 
    if (fCanvas && fGlobal)
       SetModel(fCanvas->GetClickSelectedPad(), fCanvas->GetClickSelected(), kButton1Down);
-
-   printf("Show editor\n");
 
    if (!gROOT->GetListOfCleanups()->FindObject(this))
       gROOT->GetListOfCleanups()->Add(this);
@@ -158,8 +153,7 @@ void TQt6GedEditor::Show()
 
    fDialog->setAttribute(Qt::WA_DeleteOnClose);
 
-   QObject::connect(fDialog, &QDialog::finished, [this](int result) {
-      printf("Dialog finished %d\n", result);
+   QObject::connect(fDialog, &QDialog::finished, [this]([[maybe_unused]] int result) {
       fDialog = nullptr;
       fFormLayout = nullptr;
    });
@@ -419,8 +413,8 @@ void TQt6GedEditor::AddTAttText(TAttText *atttext)
 
    fFormLayout->addRow("Font:", fontCombo);
 
-   QDoubleSpinBox* floatSpinBox = nullptr;
-   QSpinBox *intSpinBox = nullptr;
+   // QDoubleSpinBox* floatSpinBox = nullptr;
+   //QSpinBox *intSpinBox = nullptr;
 
    if (currentPrec == 2) {
       auto floatSpinBox = new CustomDoubleSpinBox();

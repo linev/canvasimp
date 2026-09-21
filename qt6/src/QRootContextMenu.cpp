@@ -332,31 +332,17 @@ void QRootContextMenu::executeMenu(int id)
    }
 
    if (id < kToggleStart) {
-      auto m = (TMethod *) ud;
-
-
-      /*
-      if (!strcmp(m->GetName(), "SetLineAttributes")) {
-         SetLineAttributesDialog();
-      } else if (!strcmp(m->GetName(), "SetFillAttributes")) {
-         SetFillAttributesDialog();
-      } else if (!strcmp(m->GetName(), "SetTextAttributes")) {
-         SetTextAttributesDialog();
-      } else if (!strcmp(m->GetName(), "SetMarkerAttributes")) {
-         SetMarkerAttributesDialog();
-      } */
-
+      auto m = (TMethod *)ud;
       fContextMenu->Action(m);
-
    } else if (id >= kToggleStart && id < kToggleListStart) {
-      TToggle *t = (TToggle *) ud;
+      auto t = (TToggle *) ud;
       fContextMenu->Action(t);
    } else if (id >= kToggleListStart && id < kUserFunctionStart) {
-      TToggle *t = (TToggle *) ud;
+      auto t = (TToggle *) ud;
       if (t->GetState() == 0)
          t->SetState(1);
    } else {
-      TClassMenuItem *mi = (TClassMenuItem*)ud;
+      auto mi = (TClassMenuItem *)ud;
       fContextMenu->Action(mi);
    }
 }
